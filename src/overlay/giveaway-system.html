@@ -1,0 +1,2731 @@
+<div class="giveawayOverlay">
+    <style>
+        :root {
+            --background-color: #111111;
+            --accent-color: #a60000;
+            --shadow-color: #a60000;
+            --text-color: #e3e3e3;
+            --title-color: #e3e3e3;
+            --winner-color: #ffcc00;
+            --entry-number-color: #e3e3e3;
+            --paused-overlay-color: var(--accent-color);
+            --close-timer-urgent-color: #ff4444;
+            --font-size: 24px;
+            --giveaway-scale: 1;
+            --giveaway-width: 350px;
+        }
+
+        .stat-value.entries-count.entry-burst,
+        .infoTicker .value.entry-burst {
+            animation: entryBurst 650ms ease;
+            animation-fill-mode: both;
+        }
+
+        .infoTicker .value.entries-active {
+            color: var(--entry-number-color);
+        }
+
+        .giveawayContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            transition: all 200ms ease;
+            position: relative;
+        }
+
+        .giveawayContainer.minimal {
+            gap: 6px;
+        }
+
+        .giveawayContainer.image-below {
+            flex-direction: column-reverse;
+        }
+
+        .giveawayContainer.image-left,
+        .giveawayContainer.image-right {
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .giveawayContainer.image-right {
+            flex-direction: row-reverse;
+        }
+
+        .giveawayContainer.image-left .imageWrapper,
+        .giveawayContainer.image-right .imageWrapper {
+            width: auto;
+            max-width: none;
+            flex-shrink: 0;
+        }
+
+        .giveawayContainer.image-left .giveawayImage,
+        .giveawayContainer.image-right .giveawayImage {
+            width: auto;
+            max-width: none;
+        }
+
+        .giveawayContainer.align-start {
+            align-items: flex-start;
+        }
+
+        .giveawayContainer.horizontal .giveawayWidget {
+            margin: 0;
+            flex-shrink: 0;
+            flex-grow: 0;
+            flex-basis: var(--giveaway-width);
+            max-width: var(--giveaway-width);
+        }
+
+        .giveawayContainer.horizontal .giveawayWidget.minimal {
+            flex-basis: min(var(--giveaway-width), 260px);
+            max-width: min(var(--giveaway-width), 260px);
+        }
+
+        .imageWrapper {
+            position: relative;
+            width: 100%;
+            max-width: var(--giveaway-width);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .giveawayImage {
+            width: 100%;
+            max-width: var(--giveaway-width);
+            max-height: 220px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: none;
+            transition:
+                transform 600ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 300ms ease,
+                max-height 500ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                height 500ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                margin 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .image-text {
+            position: absolute;
+            width: 100%;
+            left: 0;
+            right: 0;
+            padding: 8px 12px;
+            color: var(--text-color);
+            text-align: center;
+            font-weight: 700;
+            text-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+        }
+
+        .image-text.top {
+            top: 6px;
+        }
+
+        .image-text.bottom {
+            bottom: 6px;
+        }
+
+        .image-text.center {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .image-text.center-left {
+            top: 50%;
+            left: 8px;
+            right: auto;
+            text-align: left;
+            transform: translateY(-50%);
+        }
+
+        .image-text.center-right {
+            top: 50%;
+            right: 8px;
+            left: auto;
+            text-align: right;
+            transform: translateY(-50%);
+        }
+
+        .image-text.top-left {
+            top: 6px;
+            left: 8px;
+            right: auto;
+            text-align: left;
+        }
+
+        .image-text.top-right {
+            top: 6px;
+            right: 8px;
+            left: auto;
+            text-align: right;
+        }
+
+        .image-text.bottom-left {
+            bottom: 6px;
+            left: 8px;
+            right: auto;
+            text-align: left;
+        }
+
+        .image-text.bottom-right {
+            bottom: 6px;
+            right: 8px;
+            left: auto;
+            text-align: right;
+        }
+
+        .giveawayImage.visible {
+            display: block;
+        }
+
+        .image-only .giveawayWidget,
+        .image-only .giveawayImage {
+            display: none;
+        }
+
+        .image-only .giveawayContainer {
+            gap: 0;
+        }
+
+        .image-only.has-image .giveawayImage,
+        .giveawayContainer.image-only.has-image .giveawayImage {
+            display: block;
+            max-height: 360px;
+        }
+
+        .giveawayContainer.paused-image-hidden .giveawayImage {
+            opacity: 0;
+            transform: translateY(0);
+            max-height: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
+        }
+
+        .giveawayContainer.paused-image-hidden.image-below .giveawayImage {
+            transform: translateY(0);
+        }
+
+        .giveawayContainer.slide-cycle {
+            position: relative;
+            overflow: visible;
+            gap: 0;
+        }
+
+        .giveawayContainer.slide-cycle .giveawayImage {
+            transition: transform 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+            will-change: transform;
+            transform: translateY(0);
+        }
+
+        .giveawayContainer.slide-cycle.horizontal .giveawayImage {
+            transform: translateX(0);
+        }
+
+        .giveawayContainer.slide-cycle.image-below .giveawayImage {
+            position: relative;
+            z-index: 1;
+        }
+
+        .giveawayContainer.slide-cycle.image-below .giveawayWidget {
+            position: relative;
+            z-index: 2;
+        }
+
+        .giveawayContainer.slide-cycle.image-below:not(.slide-showing) .giveawayWidget {
+            z-index: 0;
+        }
+
+        .giveawayContainer.slide-cycle:not(.horizontal) .giveawayWidget {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            margin-top: 0;
+            margin-bottom: 0;
+            transition:
+                max-height 600ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                margin 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+            will-change: max-height, opacity, margin;
+        }
+
+        .giveawayContainer.slide-cycle.horizontal .giveawayWidget {
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+            margin-left: 0;
+            margin-right: 0;
+            transition:
+                max-width 600ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                margin 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+            will-change: max-width, opacity, margin;
+        }
+
+        .giveawayContainer.slide-cycle.horizontal .giveawayWidget .content-layer {
+            width: var(--giveaway-width);
+            min-width: var(--giveaway-width);
+        }
+
+        .giveawayContainer.slide-cycle:not(.horizontal).slide-showing .giveawayWidget {
+            max-height: var(--slide-target-height, 800px);
+            opacity: 1;
+        }
+
+        .giveawayContainer.slide-cycle.horizontal.slide-showing .giveawayWidget {
+            max-width: var(--slide-target-width, 800px);
+            opacity: 1;
+        }
+
+        .giveawayContainer.slide-cycle.image-above.slide-showing .giveawayWidget,
+        .giveawayContainer.slide-image.image-below.slide-image-showing .image-slide-wrapper {
+            margin-top: 10px;
+        }
+
+        .giveawayContainer.slide-cycle.image-below.slide-showing .giveawayWidget,
+        .giveawayContainer.slide-image.image-above.slide-image-showing .image-slide-wrapper {
+            margin-bottom: 10px;
+        }
+
+        .giveawayContainer.slide-cycle.horizontal.image-left.slide-showing .giveawayWidget,
+        .giveawayContainer.slide-image.horizontal.image-right.slide-image-showing .image-slide-wrapper {
+            margin-left: 10px;
+        }
+
+        .giveawayContainer.slide-cycle.horizontal.image-right.slide-showing .giveawayWidget,
+        .giveawayContainer.slide-image.horizontal.image-left.slide-image-showing .image-slide-wrapper {
+            margin-right: 10px;
+        }
+
+        .giveawayContainer.slide-cycle.image-above.slide-showing .giveawayImage,
+        .giveawayContainer.slide-cycle.image-below.slide-showing .giveawayImage {
+            transform: translateY(0);
+        }
+
+        .giveawayContainer.slide-cycle.horizontal.image-right.slide-showing .giveawayImage,
+        .giveawayContainer.slide-cycle.horizontal.image-left.slide-showing .giveawayImage {
+            transform: translateX(0);
+        }
+
+        .giveawayContainer.slide-image {
+            position: relative;
+            overflow: visible;
+            gap: 0;
+        }
+
+        .giveawayContainer.slide-image .giveawayWidget {
+            opacity: 1;
+            max-height: none;
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+
+        .giveawayContainer.slide-image:not(.horizontal) .image-slide-wrapper {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            margin: 0;
+            transition:
+                max-height 600ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                margin 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+            will-change: max-height, opacity, margin;
+        }
+
+        .giveawayContainer.slide-image.horizontal .image-slide-wrapper {
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+            margin: 0;
+            transition:
+                max-width 600ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                margin 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+            will-change: max-width, opacity, margin;
+        }
+
+        .giveawayContainer.slide-image:not(.horizontal).slide-image-showing .image-slide-wrapper {
+            max-height: var(--slide-image-target-height, 300px);
+            opacity: 1;
+        }
+
+        .giveawayContainer.slide-image.horizontal.slide-image-showing .image-slide-wrapper {
+            max-width: var(--slide-image-target-width, 300px);
+            opacity: 1;
+        }
+
+        .giveawayContainer.slide-image .giveawayImage {
+            display: block;
+            max-height: none !important;
+            max-width: none;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            z-index: 10;
+        }
+
+        .giveawayWidget {
+            background-color: var(--background-color);
+            zoom: var(--giveaway-scale);
+            border-radius: 8px;
+            overflow: hidden;
+            width: var(--giveaway-width);
+            max-width: 100%;
+            font-family: Montserrat, sans-serif;
+            position: relative;
+            transition: all 200ms ease;
+            margin: auto;
+        }
+
+        .giveawayWidget.minimal {
+            width: min(var(--giveaway-width), 260px);
+            border-radius: 12px;
+        }
+
+        .infoTicker {
+            display: none;
+            padding: 6px 10px;
+            margin: 0 10px 6px;
+            border-radius: 10px;
+            color: var(--text-color);
+            font-size: calc(var(--font-size) * 0.55);
+            letter-spacing: 0.5px;
+            min-height: 26px;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-align: center;
+        }
+
+        .infoTicker .label {
+            color: var(--accent-color);
+            font-weight: 700;
+            margin-right: 6px;
+        }
+
+        .infoTicker .value {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .infoTicker .value.urgent {
+            color: #ff4444;
+            animation: countdownPulse 0.5s infinite;
+        }
+
+        .giveawayWidget.ticker-only .content-layer>*:not(.infoTicker) {
+            display: none !important;
+        }
+
+        .giveawayWidget.ticker-only .infoTicker {
+            display: flex !important;
+            margin: 0;
+            width: 100%;
+        }
+
+        .giveawayWidget.bg-image {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .giveawayWidget.bg-image::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: transparent;
+            opacity: 0;
+            backdrop-filter: blur(2px);
+            z-index: 0;
+            display: block;
+            transition: opacity 200ms ease;
+        }
+
+        .giveawayWidget.bg-image.dim::before {
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.65));
+            opacity: 0.65;
+        }
+
+        .giveawayWidget .content-layer {
+            position: relative;
+            z-index: 1;
+        }
+
+        .titleContainer {
+            color: var(--title-color);
+            font-size: var(--font-size);
+            text-align: center;
+            font-weight: 700;
+            padding: 15px 20px;
+            background-image: linear-gradient(to right, transparent 0%, var(--accent-color) 20%, var(--accent-color) 80%, transparent 100%);
+            background-position: bottom;
+            background-size: 100% 2px;
+            background-repeat: no-repeat;
+            transition: padding 200ms ease, font-size 200ms ease;
+        }
+
+        .giveawayWidget.minimal .titleContainer {
+            font-size: calc(var(--font-size) * 0.8);
+            padding: 10px 12px;
+            text-align: center;
+        }
+
+        .prizeContainer {
+            color: var(--winner-color);
+            font-size: calc(var(--font-size) * 0.8);
+            text-align: center;
+            padding: 10px 20px;
+            font-weight: 600;
+            transition: padding 200ms ease, font-size 200ms ease;
+        }
+
+        .giveawayWidget.minimal .prizeContainer {
+            font-size: calc(var(--font-size) * 0.65);
+            padding: 8px 12px;
+            text-align: center;
+        }
+
+        .prizeContainer .prize-label {
+            color: var(--text-color);
+            font-size: calc(var(--font-size) * 0.6);
+            opacity: 0.8;
+        }
+
+        .statsContainer {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 20px;
+            transition: padding 200ms ease;
+            background-image: linear-gradient(to right, transparent 0%, var(--accent-color) 20%, var(--accent-color) 80%, transparent 100%);
+            background-position: center bottom;
+            background-size: 100% 2px;
+            background-repeat: no-repeat;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            color: var(--text-color);
+            font-size: calc(var(--font-size) * 1.2);
+            font-weight: 700;
+        }
+
+        .stat-value.entries-count {
+            color: var(--entry-number-color);
+        }
+
+        .stat-label {
+            color: var(--text-color);
+            font-size: calc(var(--font-size) * 0.5);
+        }
+
+        .giveawayWidget.minimal .stat-value {
+            font-size: calc(var(--font-size) * 0.9);
+        }
+
+        .giveawayWidget.minimal .stat-label {
+            font-size: calc(var(--font-size) * 0.45);
+            letter-spacing: 0.5px;
+        }
+
+        .giveawayWidget.minimal .stat,
+        .giveawayWidget.minimal .commandContainer *,
+        .giveawayWidget.minimal .claimSection {
+            display: none !important;
+        }
+
+        .giveawayWidget.minimal .commandContainer {
+            padding: 8px !important;
+        }
+
+        .giveawayWidget.minimal .statsContainer {
+            padding: 2px !important;
+        }
+
+        .giveawayWidget.minimal .prizeContainer,
+        .giveawayWidget.minimal .winnerSection {
+            background: none;
+            border: none;
+            margin: 0;
+        }
+
+        .commandContainer {
+            padding: 15px 20px;
+            text-align: center;
+            transition: padding 200ms ease;
+        }
+
+        .command {
+            color: var(--text-color);
+            font-size: calc(var(--font-size) * 0.7);
+            letter-spacing: 2px;
+        }
+
+        .command.entries-closed {
+            color: var(--winner-color);
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .giveawayWidget.minimal .command {
+            font-size: calc(var(--font-size) * 0.55);
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .command span,
+        .command .command-text {
+            color: var(--accent-color);
+            font-weight: 700;
+        }
+
+        .winnerSection {
+            padding: 0 20px 20px 20px;
+            text-align: center;
+            display: none;
+            transition: padding 200ms ease;
+        }
+
+        .winnerSection.active {
+            display: block;
+        }
+
+        .winner-label {
+            color: var(--text-color);
+            font-size: calc(var(--font-size) * 0.6);
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .winner-name {
+            color: var(--winner-color);
+            font-size: calc(var(--font-size) * 1.2);
+            font-weight: 700;
+            text-shadow: 0 0 10px var(--shadow-color);
+        }
+
+        .winner-crown {
+            font-size: 32px;
+            animation: crownBob 2s infinite ease-in-out;
+            display: inline-block;
+        }
+
+        .winner-status {
+            margin-top: 10px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            font-size: calc(var(--font-size) * 0.6);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .giveawayWidget.minimal .winnerSection {
+            padding: 10px;
+        }
+
+        .giveawayWidget.minimal .winner-crown {
+            font-size: 26px;
+        }
+
+        .giveawayWidget.minimal .winner-name {
+            font-size: calc(var(--font-size) * 0.9);
+        }
+
+        .giveawayWidget.minimal .winner-status {
+            margin-top: 6px;
+            padding: 4px 10px;
+            font-size: calc(var(--font-size) * 0.5);
+        }
+
+        .winner-status.pending {
+            background: linear-gradient(90deg, #f0ad4e, #ec971f);
+            color: #000;
+        }
+
+        .winner-status.claimed {
+            background: linear-gradient(90deg, #5bc0de, #31b0d5);
+            color: #000;
+        }
+
+        .winner-status.approved {
+            background: linear-gradient(90deg, #5cb85c, #449d44);
+            color: #fff;
+            animation: winnerPulse 2s ease-in-out infinite;
+            will-change: transform, box-shadow;
+        }
+
+        .claimSection {
+            padding: 15px 20px 10px;
+            text-align: center;
+            display: none;
+            transition: padding 200ms ease;
+            background-image: linear-gradient(to right, transparent 0%, var(--accent-color) 20%, var(--accent-color) 80%, transparent 100%);
+            background-position: center top;
+            background-size: 100% 2px;
+            background-repeat: no-repeat;
+        }
+
+        .claimSection.active {
+            display: block;
+        }
+
+        .giveawayWidget.minimal .claimSection {
+            padding: 8px 10px;
+        }
+
+        .claim-command {
+            color: var(--text-color);
+            font-size: calc(var(--font-size) * 0.7);
+            margin-bottom: 10px;
+        }
+
+        .claim-command span,
+        .claim-command .command-text {
+            color: var(--accent-color);
+            font-weight: 700;
+        }
+
+        .giveaway-countdown {
+            color: var(--winner-color);
+            font-size: calc(var(--font-size) * 1.5);
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 12px;
+            border-radius: 8px;
+            text-align: center;
+            max-height: none !important;
+            height: auto;
+            width: auto;
+        }
+
+        .giveaway-countdown.urgent {
+            color: #ff4444;
+            animation: countdownPulse 0.5s infinite;
+        }
+
+        .pausedOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            border-radius: inherit;
+        }
+
+        .pausedOverlay.active {
+            display: flex;
+        }
+
+        .paused-text {
+            font-size: calc(var(--font-size) * 1.2);
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            padding: 10px 20px;
+            border: 2px solid var(--accent-color);
+            border-radius: 8px;
+            background: var(--background-color);
+            color: var(--paused-overlay-color);
+        }
+
+        .endedOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 50;
+            border-radius: inherit;
+        }
+
+        .endedOverlay.active {
+            display: block;
+        }
+
+        .giveawayWidget.celebrating {
+            animation: winnerPulse 2s ease-in-out infinite;
+            will-change: transform, box-shadow;
+        }
+
+        .giveawayWidget.celebrating .winnerSection {
+            position: relative;
+            overflow: visible;
+        }
+
+        .giveawayWidget.starting {
+            animation: giveawayStart 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .odds-display {
+            color: var(--text-color);
+            font-size: calc(var(--font-size) * 0.5);
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .command.close-timer-command {
+            color: var(--winner-color);
+        }
+
+        .command.close-timer-command.urgent {
+            color: #ff4444;
+            animation: countdownPulse 0.5s infinite;
+        }
+
+        .command.close-timer-command span,
+        .command.close-timer-command .command-text,
+        .command.close-timer-command .close-timer-value {
+            color: var(--winner-color);
+            font-weight: 700;
+        }
+
+        .command.close-timer-command.urgent span,
+        .command.close-timer-command.urgent .command-text,
+        .command.close-timer-command.urgent .close-timer-value {
+            color: var(--close-timer-urgent-color, #ff4444);
+        }
+
+        @keyframes crownBob {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(15deg);
+            }
+
+            50% {
+                transform: translateY(-5px) rotate(15deg);
+            }
+        }
+
+        @keyframes winnerPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow:
+                    0 0 0 1px var(--accent-color),
+                    0 0 10px 2px var(--accent-color);
+            }
+
+            50% {
+                transform: scale(1.02);
+                box-shadow:
+                    0 0 0 1px var(--accent-color),
+                    0 0 24px 8px var(--accent-color);
+            }
+        }
+
+        @keyframes confettiFall {
+            0% {
+                transform: translateY(-50px) rotate(0deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(200px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        @keyframes countdownPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        @keyframes entryBurst {
+            0% {
+                transform: scale(1) translateZ(0);
+                text-shadow: 0 0 0 rgba(255, 204, 0, 0.6);
+                color: var(--winner-color);
+            }
+
+            35% {
+                transform: scale(1.18) translateZ(0);
+                text-shadow: 0 0 16px rgba(255, 204, 0, 0.75);
+                color: #fff7cc;
+            }
+
+            100% {
+                transform: scale(1) translateZ(0);
+                text-shadow: 0 0 0 rgba(255, 204, 0, 0);
+                color: var(--entry-number-color);
+            }
+        }
+
+        @keyframes giveawayStart {
+            0% {
+                opacity: 0;
+                transform: scale(0.95) translateY(20px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+    </style>
+
+    <div class="giveawayContainer">
+        <div class="imageWrapper">
+            <img class="giveawayImage" alt="Giveaway image" />
+            <div class="image-text" style="display: none;"></div>
+        </div>
+        <div id="giveawayWidget" class="giveawayWidget">
+            <div class="content-layer">
+                <div class="titleContainer">
+                    <span class="title"></span>
+                </div>
+                <div class="prizeContainer">
+                    <div class="prize-label">PRIZE</div>
+                    <div class="prize"></div>
+                </div>
+                <div class="infoTicker">
+                    <span class="label"></span><span class="value"></span>
+                </div>
+                <div class="statsContainer">
+                    <div class="stat">
+                        <div class="stat-value entries-count">0</div>
+                        <div class="stat-label">ENTRIES</div>
+                    </div>
+                </div>
+                <div class="commandContainer">
+                    <div class="command entry-command">Type <span>!enter</span> to join!</div>
+                    <div class="command close-timer-command" style="display: none;">Time left: <span></span></div>
+                </div>
+                <div class="winnerSection">
+                    <div class="winner-crown">&#x1F451;</div>
+                    <div class="winner-label">WINNER</div>
+                    <div class="winner-name"></div>
+                    <div class="odds-display"></div>
+                    <div class="winner-status"></div>
+                </div>
+                <div class="claimSection">
+                    <div class="claim-command">Type <span>!claim</span> to claim your prize!</div>
+                    <div class="giveaway-countdown"></div>
+                </div>
+            </div>
+            <div class="pausedOverlay">
+                <div class="paused-text">PAUSED</div>
+            </div>
+            <div class="endedOverlay"></div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {};
+
+        let commandCycleInterval = null;
+        let tickerUpdateInterval = null;
+        let commandUpdateInterval = null;
+        let rotationInterval = null;
+        let tickerInterval = null;
+        let swapInterval = null;
+        let swapShowingImage = false;
+        let slideRevealTimeout = null;
+        let slideHideTimeout = null;
+        let slideImageRevealTimeout = null;
+        let slideImageHideTimeout = null;
+        let activeWinnerId = null;
+        let activeRotationIndex = 0;
+        let lastEntriesCountMap = {};
+        let currentCloseTime = null;
+        let closeRemainingSecondsFromServer = null;
+        let closeTimerStartTime = null;
+        let claimTimerState = {};
+        let pausedCloseRemaining = null;
+        let pausedClaimState = {};
+        let isOverlayPaused = false;
+        let showingCloseTimer = false;
+        let tickerIndex = 0;
+        let tickerMessages = [];
+        let tickerEntryBurstPending = false;
+        let latestConfigStyles = {};
+        let latestConfigDisplay = {};
+        let imageTextInterval = null;
+
+        // Pull the base CSS from the inline <style> so we can scope it per giveaway instance.
+        const BASE_STYLE_TEXT = (() => {
+            const styleEl = document.querySelector('.giveawayOverlay style');
+            if (!styleEl) return '';
+            const css = styleEl.textContent || '';
+            styleEl.remove(); // Remove the global style to prevent cross-overlay contamination
+            return css;
+        })();
+
+        function buildScopedCss(cssText, prefix) {
+            if (!cssText || !prefix) return '';
+            // Use a temporary stylesheet to safely read rules
+            const tempStyle = document.createElement('style');
+            tempStyle.textContent = cssText;
+            document.head.appendChild(tempStyle);
+            const sheet = tempStyle.sheet;
+            const scoped = [];
+
+            const canReadRules = typeof CSSRule !== 'undefined' && sheet && sheet.cssRules;
+            if (canReadRules) {
+                for (const rule of Array.from(sheet.cssRules)) {
+                    // STYLE_RULE only
+                    if (rule.type === CSSRule.STYLE_RULE) {
+                        const scopedSelectors = rule.selectorText
+                            .split(',')
+                            .map(sel => sel.trim())
+                            .filter(Boolean)
+                            .map(sel => sel === ':root' ? prefix : `${prefix} ${sel}`)
+                            .join(', ');
+                        scoped.push(`${scopedSelectors} { ${rule.style.cssText} }`);
+                    } else {
+                        scoped.push(rule.cssText);
+                    }
+                }
+            } else {
+                // Fallback: minimal replacement to keep things styled even if CSSRule isn't available
+                scoped.push(cssText.replace(/:root/g, prefix));
+            }
+
+            tempStyle.remove();
+            return scoped.join('\n');
+        }
+
+        function ensureScopedStylesFor(giveawayId) {
+            if (!BASE_STYLE_TEXT || !giveawayId) return;
+            const existing = document.querySelector(`style[data-giveaway-style="${giveawayId}"]`);
+            if (existing) return;
+
+            const scopedStyle = document.createElement('style');
+            scopedStyle.dataset.giveawayStyle = giveawayId;
+            scopedStyle.textContent = buildScopedCss(BASE_STYLE_TEXT, `#${giveawayId}`);
+            document.head.appendChild(scopedStyle);
+        }
+
+        function triggerEntryBurst(element) {
+            if (!element) return;
+            element.classList.remove('entry-burst');
+            void element.offsetWidth;
+            element.classList.add('entry-burst');
+            const cleanup = () => {
+                element.classList.remove('entry-burst');
+                element.removeEventListener('animationend', cleanup);
+            };
+            element.addEventListener('animationend', cleanup);
+        }
+
+        function escapeHtml(str) {
+            if (str === undefined || str === null) return '';
+            return str.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function formatTemplate(template, replacements) {
+            const source = template || '';
+            return source.replace(/\{(\w+)\}/g, (match, key) => {
+                const lower = key.toLowerCase();
+                if (replacements && Object.prototype.hasOwnProperty.call(replacements, key)) {
+                    return replacements[key];
+                }
+                if (replacements && Object.prototype.hasOwnProperty.call(replacements, lower)) {
+                    return replacements[lower];
+                }
+                return match;
+            });
+        }
+
+        function getStatusText(config, hasPendingWinner, entriesClosed) {
+            if (config.ended) return 'Ended';
+            if (config.paused) return 'Paused';
+            if (hasPendingWinner) return config.display?.winnerPendingText || 'Winner pending';
+            if (entriesClosed) return config.giveawayData?.entriesClosedText || 'Entries closed';
+            return 'Open';
+        }
+
+        function getTimeRemainingForDisplay(config, hasPendingWinner) {
+            if (!config) return null;
+            // For close timer (when no pending winner and entries not closed)
+            if (!hasPendingWinner && !config.entriesClosed) {
+                // Use the synchronized close time function
+                return getCloseTimeRemaining();
+            }
+            // For claim timer (when there's a pending winner)
+            if (hasPendingWinner && config.enableClaimTimer !== false && Array.isArray(config.pendingWinners)) {
+                const pendingWithDeadline = config.pendingWinners.find(w => w.status === 'pending');
+                if (pendingWithDeadline) {
+                    // Use the synchronized claim time function
+                    return getClaimTimeRemainingForWinner(pendingWithDeadline);
+                }
+            }
+            return null;
+        }
+
+        function getStatusColors(config) {
+            const styles = config?.styles || {};
+            const textColor = styles.textColor || '#e3e3e3';
+            const labelColor = styles.statusLabelColor || styles.entriesClosedColor || styles.accentColor || textColor;
+            return {
+                label: labelColor,
+                open: textColor,
+                pending: styles.winnerPendingColor || styles.entryCommandColor || labelColor,
+                closed: styles.statusClosedColor || styles.entriesClosedColor || styles.entryCommandColor || labelColor,
+                paused: styles.statusPausedColor || labelColor,
+                ended: styles.statusEndedColor || labelColor
+            };
+        }
+
+        function getStatusValueColor(statusText, colors) {
+            const normalized = (statusText || '').toLowerCase();
+            if (normalized.includes('pending')) return colors.pending || colors.label;
+            if (normalized.includes('close')) return colors.closed || colors.label;
+            if (normalized.includes('pause')) return colors.paused || colors.label;
+            if (normalized.includes('end')) return colors.ended || colors.label;
+            if (normalized.includes('open')) return colors.open || colors.label;
+            return colors.label || '';
+        }
+
+        function getGiveawayId(giveawayTitle) {
+            return `giveaway_${giveawayTitle.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        }
+
+        function resolveImageUrl(styles) {
+            if (!styles) return '';
+            if (styles.imageMode === 'local' && styles.imageToken) {
+                return `http://${window.location.hostname}:7472/resource/${styles.imageToken}`;
+            }
+            return styles.imageUrl || '';
+        }
+
+        function createConfetti(element) {
+            const colors = ['#FFD700', '#FF0000', '#00FF00', '#0000FF', '#FF00FF', '#00FFFF'];
+            const confettiCount = 50;
+
+            for (let i = 0; i < confettiCount; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = `${Math.random() * 100}%`;
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animation = `confettiFall ${1 + Math.random() * 2}s linear`;
+                confetti.style.animationDelay = `${Math.random() * 0.5}s`;
+
+                element.appendChild(confetti);
+
+                confetti.addEventListener('animationend', () => confetti.remove());
+            }
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
+        }
+
+        function clearClaimCountdown(element) {
+            if (!element) return;
+            if (element._claimInterval) {
+                clearInterval(element._claimInterval);
+                element._claimInterval = null;
+            }
+        }
+
+        /**
+         * Start a countdown timer on an element.
+         * @param {number} initialSeconds - The number of seconds to start counting down from
+         * @param {HTMLElement} element - The DOM element to display the countdown
+         * @param {Object} colors - Color configuration {normalColor, urgentColor, urgentThreshold}
+         */
+        function startCountdown(initialSeconds, element, colors = {}) {
+            clearClaimCountdown(element);
+            const { normalColor = '', urgentColor = '#ff4444', urgentThreshold = 10 } = colors;
+
+            // Store the start time and initial seconds to calculate elapsed time accurately
+            const startTime = Date.now();
+            const startSeconds = Math.max(0, Math.floor(initialSeconds));
+
+            function update() {
+                if (isOverlayPaused) return;
+
+                // Calculate remaining based on elapsed time since countdown started
+                const elapsedMs = Date.now() - startTime;
+                const elapsedSeconds = Math.floor(elapsedMs / 1000);
+                const remaining = Math.max(0, startSeconds - elapsedSeconds);
+
+                element.textContent = formatTime(remaining);
+
+                if (remaining <= urgentThreshold) {
+                    element.classList.add('urgent');
+                    element.style.color = urgentColor || '';
+                } else {
+                    element.classList.remove('urgent');
+                    element.style.color = normalColor || '';
+                }
+
+                if (remaining <= 0) {
+                    clearClaimCountdown(element);
+                }
+            }
+
+            // Display immediately with the initial value
+            element.textContent = formatTime(startSeconds);
+            if (startSeconds <= urgentThreshold) {
+                element.classList.add('urgent');
+                element.style.color = urgentColor || '';
+            } else {
+                element.classList.remove('urgent');
+                element.style.color = normalColor || '';
+            }
+
+            // Start interval
+            element._claimInterval = setInterval(update, 1000);
+        }
+
+        function clearCommandCycle() {
+            if (commandCycleInterval) {
+                clearInterval(commandCycleInterval);
+                commandCycleInterval = null;
+            }
+            if (commandUpdateInterval) {
+                clearInterval(commandUpdateInterval);
+                commandUpdateInterval = null;
+            }
+            showingCloseTimer = false;
+        }
+
+        function startCommandCycle(container, config, entryCommandEl, closeTimerEl) {
+            clearCommandCycle();
+
+            const showEntryCommand = config.display?.showEntryCommand !== false;
+            const showCloseTimer = config.display?.showCloseTimer !== false;
+            const hasCloseTime = currentCloseTime && !config.ended && !config.paused && !config.entriesClosed;
+            const closeTimeRemaining = hasCloseTime ? getCloseTimeRemaining() : null;
+
+            // If only entry command or only close timer, show just that one
+            if (!showCloseTimer || !hasCloseTime || !closeTimeRemaining) {
+                // Only show entry command
+                entryCommandEl.style.display = showEntryCommand ? '' : 'none';
+                closeTimerEl.style.display = 'none';
+                return;
+            }
+
+            if (!showEntryCommand) {
+                // Only show close timer
+                entryCommandEl.style.display = 'none';
+                closeTimerEl.style.display = '';
+                updateCloseTimerDisplay(closeTimerEl);
+                commandUpdateInterval = setInterval(() => updateCloseTimerDisplay(closeTimerEl), 1000);
+                return;
+            }
+
+            // Both are enabled - cycle between them
+            showingCloseTimer = false;
+            entryCommandEl.style.display = '';
+            closeTimerEl.style.display = 'none';
+
+            // Update close timer value every second
+            commandUpdateInterval = setInterval(() => {
+                if (showingCloseTimer) {
+                    updateCloseTimerDisplay(closeTimerEl);
+                }
+            }, 1000);
+
+            const commandCycleSeconds = Math.max(1, Number(config.display?.commandCycleIntervalSeconds) || 3);
+
+            // Cycle between entry command and close timer on a configurable interval
+            commandCycleInterval = setInterval(() => {
+                showingCloseTimer = !showingCloseTimer;
+                if (showingCloseTimer) {
+                    const remaining = getCloseTimeRemaining();
+                    if (remaining && remaining > 0) {
+                        entryCommandEl.style.display = 'none';
+                        closeTimerEl.style.display = '';
+                        updateCloseTimerDisplay(closeTimerEl);
+                    } else {
+                        // Timer expired, stop cycling
+                        clearCommandCycle();
+                        entryCommandEl.style.display = showEntryCommand ? '' : 'none';
+                        closeTimerEl.style.display = 'none';
+                    }
+                } else {
+                    entryCommandEl.style.display = '';
+                    closeTimerEl.style.display = 'none';
+                }
+            }, commandCycleSeconds * 1000);
+        }
+
+        function updateCloseTimerDisplay(closeTimerEl) {
+            const remaining = getCloseTimeRemaining();
+            const spanEl = closeTimerEl.querySelector('.close-timer-value') || closeTimerEl.querySelector('span');
+            if (spanEl) {
+                spanEl.textContent = remaining ? formatTime(remaining) : '0s';
+            }
+            const urgentThreshold = Math.max(1, Number(latestConfigDisplay?.closeTimerUrgentSeconds) || 30);
+            const shouldUrgent = !isOverlayPaused && remaining && remaining <= urgentThreshold;
+            if (shouldUrgent) {
+                closeTimerEl.classList.add('urgent');
+                const urgentColor = latestConfigStyles?.closeTimerUrgentColor || '#ff4444';
+                closeTimerEl.style.color = urgentColor || '';
+                if (spanEl) spanEl.style.color = urgentColor || '';
+            } else {
+                closeTimerEl.classList.remove('urgent');
+                const textColor = latestConfigStyles?.closeTimerTextColor || latestConfigStyles?.closeTimerColor || '';
+                const valueColor = latestConfigStyles?.closeTimerValueColor || latestConfigStyles?.closeTimerColor || textColor || '';
+                closeTimerEl.style.color = textColor || '';
+                if (spanEl) spanEl.style.color = valueColor || '';
+            }
+        }
+
+        function computeRemainingSeconds(timestamp) {
+            if (!timestamp) return null;
+            const ms = new Date(timestamp).getTime();
+            if (!Number.isFinite(ms)) return null;
+            const remaining = Math.max(0, Math.floor((ms - Date.now()) / 1000));
+            return remaining > 0 ? remaining : null;
+        }
+
+        function getCloseTimeRemaining() {
+            if (isOverlayPaused) return pausedCloseRemaining;
+            // Use server-provided remaining seconds if available
+            if (closeRemainingSecondsFromServer != null && closeTimerStartTime != null) {
+                const elapsedSeconds = Math.floor((Date.now() - closeTimerStartTime) / 1000);
+                const remaining = Math.max(0, closeRemainingSecondsFromServer - elapsedSeconds);
+                return remaining > 0 ? remaining : null;
+            }
+            return computeRemainingSeconds(currentCloseTime);
+        }
+
+        function clearRotation() {
+            if (rotationInterval) {
+                clearInterval(rotationInterval);
+                rotationInterval = null;
+            }
+        }
+
+        function clearTicker() {
+            if (tickerInterval) {
+                clearInterval(tickerInterval);
+                tickerInterval = null;
+            }
+            if (tickerUpdateInterval) {
+                clearInterval(tickerUpdateInterval);
+                tickerUpdateInterval = null;
+            }
+            tickerIndex = 0;
+            tickerMessages = [];
+        }
+
+        function clearSwapInterval() {
+            if (swapInterval) {
+                clearInterval(swapInterval);
+                swapInterval = null;
+            }
+            swapShowingImage = false;
+        }
+
+        function clearSlideCycle() {
+            if (slideRevealTimeout) {
+                clearTimeout(slideRevealTimeout);
+                slideRevealTimeout = null;
+            }
+            if (slideHideTimeout) {
+                clearTimeout(slideHideTimeout);
+                slideHideTimeout = null;
+            }
+        }
+
+        function clearSlideImageCycle() {
+            if (slideImageRevealTimeout) {
+                clearTimeout(slideImageRevealTimeout);
+                slideImageRevealTimeout = null;
+            }
+            if (slideImageHideTimeout) {
+                clearTimeout(slideImageHideTimeout);
+                slideImageHideTimeout = null;
+            }
+        }
+
+        function clearImageTextInterval() {
+            if (imageTextInterval) {
+                clearInterval(imageTextInterval);
+                imageTextInterval = null;
+            }
+        }
+
+        function refreshImageTextContent(container, config) {
+            const imageTextEl = container?.querySelector('.image-text');
+            if (!imageTextEl || imageTextEl.style.display === 'none') return;
+
+            // Only refresh content, do not alter placement/visibility toggles
+            clearImageTextInterval();
+
+            const hasPendingWinner = (config.pendingWinners || []).some(w => w.status === 'pending');
+            const entriesClosed = !!config.entriesClosed;
+            const template = config.display?.imageTextTemplate || '{title} - {prize}';
+            const position = (config.display?.imageTextPosition || 'bottom').toLowerCase();
+            const sizePx = Math.max(8, Number(config.display?.imageTextSize) || 18);
+            const positions = ['top', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'center', 'center-left', 'center-right'];
+            positions.forEach(p => imageTextEl.classList.remove(p));
+            imageTextEl.classList.add(positions.includes(position) ? position : 'bottom');
+            imageTextEl.style.fontSize = `${sizePx}px`;
+            const textColor = config.styles?.imageTextColor || config.styles?.textColor || '#e3e3e3';
+            const placeholderColor = config.styles?.imageTextPlaceholderColor || textColor;
+            imageTextEl.style.color = textColor;
+
+            const computeText = () => {
+                const status = getStatusText(config, hasPendingWinner, entriesClosed);
+                const timeRemaining = getTimeRemainingForDisplay(config, hasPendingWinner);
+                const replacements = {
+                    prize: `<span class="image-text-placeholder" style="color:${placeholderColor};">${escapeHtml(config.giveawayData?.prize || '')}</span>`,
+                    title: `<span class="image-text-placeholder" style="color:${placeholderColor};">${escapeHtml(config.giveawayData?.title || '')}</span>`,
+                    entrycommand: `<span class="image-text-placeholder" style="color:${placeholderColor};">${escapeHtml(config.giveawayData?.entryCommand || '')}</span>`,
+                    claimcommand: `<span class="image-text-placeholder" style="color:${placeholderColor};">${escapeHtml(config.giveawayData?.claimCommand || '')}</span>`,
+                    entries: `<span class="image-text-placeholder" style="color:${placeholderColor};">${String(config.totalEntries || 0)}</span>`,
+                    status: `<span class="image-text-placeholder" style="color:${placeholderColor};">${escapeHtml(status)}</span>`,
+                    time: `<span class="image-text-placeholder" style="color:${placeholderColor};">${timeRemaining != null ? formatTime(timeRemaining) : ''}</span>`
+                };
+                imageTextEl.innerHTML = formatTemplate(template, replacements);
+            };
+
+            computeText();
+            if (template.includes('{time}')) {
+                imageTextInterval = setInterval(computeText, 1000);
+            }
+            imageTextEl.style.display = 'block';
+        }
+
+        function applyEntryOnlyUpdate(container, giveawayId, config) {
+            if (!container || !config) return false;
+            const entriesElement = container.querySelector('.entries-count');
+            if (!entriesElement) return false;
+
+            // Only proceed when the update contains a numeric entry count
+            if (typeof config.totalEntries !== 'number' && typeof config.totalEntries !== 'string') {
+                return false;
+            }
+
+            const newCount = Number(config.totalEntries) || 0;
+            const entryNumberColor = config.styles?.entryNumberColor
+                || config.styles?.textColor
+                || latestConfigStyles?.entryNumberColor
+                || latestConfigStyles?.textColor
+                || '';
+
+            const entryKey = giveawayId || 'default';
+            entriesElement.style.color = entryNumberColor || '';
+            if (Number.isFinite(lastEntriesCountMap[entryKey]) && lastEntriesCountMap[entryKey] !== newCount) {
+                triggerEntryBurst(entriesElement);
+                tickerEntryBurstPending = true;
+            }
+            lastEntriesCountMap[entryKey] = newCount;
+            entriesElement.textContent = newCount;
+
+            // Keep ticker and image text in sync without touching layout/animation state
+            updateTicker(container, {
+                ...config,
+                styles: config.styles || latestConfigStyles,
+                display: config.display || latestConfigDisplay
+            });
+            refreshImageTextContent(container, config);
+            return true;
+        }
+
+        function getWinnerIdentifier(winner) {
+            return winner?.winId || `${winner?.username || 'unknown'}_${winner?.wonAt || ''}`;
+        }
+
+        function getClaimTimeRemainingForWinner(winner) {
+            if (!winner || winner.status !== 'pending') return null;
+            const key = winner.winId || getWinnerIdentifier(winner);
+
+            if (isOverlayPaused) {
+                const paused = pausedClaimState[key];
+                if (paused != null) return paused;
+            }
+
+            // Use tracked claim timer state for accurate countdown
+            const timerState = claimTimerState[key];
+            if (timerState && timerState.startTime && timerState.initialSeconds > 0) {
+                const elapsedSeconds = Math.floor((Date.now() - timerState.startTime) / 1000);
+                const remaining = Math.max(0, timerState.initialSeconds - elapsedSeconds);
+                return remaining > 0 ? remaining : null;
+            }
+
+            // Fallback to server-provided remaining seconds
+            if (typeof winner.claimRemainingSeconds === 'number' && winner.claimRemainingSeconds >= 0) {
+                return winner.claimRemainingSeconds > 0 ? winner.claimRemainingSeconds : null;
+            }
+
+            // Fallback, compute from deadline
+            return computeRemainingSeconds(winner.claimDeadline);
+        }
+
+        function updateClaimTimerState(winner) {
+            if (!winner || winner.status !== 'pending') return;
+            const key = winner.winId || getWinnerIdentifier(winner);
+
+            // Prefer server-provided remaining seconds, fallback to computing from deadline
+            const serverRemaining = (typeof winner.claimRemainingSeconds === 'number' && winner.claimRemainingSeconds >= 0)
+                ? Math.max(0, Math.floor(winner.claimRemainingSeconds))
+                : computeRemainingSeconds(winner.claimDeadline);
+
+            // If we have no remaining time, drop any tracked state for this winner
+            if (serverRemaining == null) {
+                delete claimTimerState[key];
+                return;
+            }
+
+            const existing = claimTimerState[key];
+            const now = Date.now();
+
+            // Initialize state when missing
+            if (!existing) {
+                claimTimerState[key] = {
+                    startTime: now,
+                    initialSeconds: serverRemaining
+                };
+                return;
+            }
+
+            // If the server reports a meaningfully different remaining time, reset the local timer to stay in sync
+            const elapsed = Math.floor((now - existing.startTime) / 1000);
+            const trackedRemaining = Math.max(0, existing.initialSeconds - elapsed);
+            if (Math.abs(serverRemaining - trackedRemaining) > 1) {
+                claimTimerState[key] = {
+                    startTime: now,
+                    initialSeconds: serverRemaining
+                };
+            }
+        }
+
+        function renderWinner(container, widget, config, winner) {
+            const winnerSection = container.querySelector('.winnerSection');
+            const claimSection = container.querySelector('.claimSection');
+            const containerEl = container.querySelector('.giveawayContainer');
+            const hasHorizontalImage = !!containerEl && (containerEl.classList.contains('image-left') || containerEl.classList.contains('image-right'));
+            if (!winner || config.display?.showWinner === false) {
+                winnerSection.classList.remove('active');
+                claimSection.classList.remove('active');
+                widget.classList.remove('celebrating');
+                container.dataset.celebrated = '';
+                clearClaimCountdown(container.querySelector('.giveaway-countdown'));
+                activeWinnerId = null;
+                if (containerEl) {
+                    containerEl.classList.remove('align-start');
+                }
+                return;
+            }
+
+            if (containerEl) {
+                containerEl.classList.toggle('align-start', hasHorizontalImage);
+            }
+
+            winnerSection.classList.add('active');
+            const winnerName = container.querySelector('.winner-name');
+            if (winnerName) {
+                winnerName.textContent = winner.username || '';
+            }
+
+            const oddsDisplay = container.querySelector('.odds-display');
+            if (oddsDisplay) {
+                const oddsMode = config.display?.oddsMode || 'both';
+                const showOdds = oddsMode !== 'disabled' && (config.display?.showOdds ?? true);
+                const showPercent = oddsMode === 'both' || oddsMode === 'percent';
+                const showRatio = oddsMode === 'both' || oddsMode === 'ratio';
+                const oddsText = config.display?.oddsText || 'Win odds: {percent}{ratio}';
+                const oddsColor = config.styles?.oddsColor || '';
+                const percentVal = winner.oddsPercentage != null ? String(winner.oddsPercentage) : '';
+                const ratioVal = winner.oddsString || '';
+                const percentHasSymbol = percentVal.includes('%');
+                const percentPart = showPercent && percentVal
+                    ? (percentHasSymbol ? percentVal : `${percentVal}%`)
+                    : '';
+                const ratioPart = showRatio && ratioVal
+                    ? (percentPart ? ` (${ratioVal})` : ratioVal)
+                    : '';
+                const hasOdds = showOdds && (percentPart || ratioPart);
+                if (hasOdds) {
+                    const formatted = formatTemplate(oddsText, {
+                        percent: percentPart,
+                        ratio: ratioPart
+                    }).replace(/\s+/g, ' ').trim();
+                    oddsDisplay.textContent = formatted;
+                    oddsDisplay.style.display = '';
+                    oddsDisplay.style.color = oddsColor || '';
+                } else {
+                    oddsDisplay.textContent = '';
+                    oddsDisplay.style.display = 'none';
+                }
+            }
+
+            const statusElement = container.querySelector('.winner-status');
+            if (statusElement) {
+                statusElement.textContent = (winner.status || '').toUpperCase();
+                statusElement.className = `winner-status ${winner.status || ''}`;
+            }
+
+            // Resolve claim/timer colors up front so we can safely apply them below
+            const textColor = config.styles?.textColor || '';
+            const winnerColor = config.styles?.winnerColor || '';
+            const claimTextColor = config.styles?.claimTextColor || textColor;
+            const claimCommandColor = config.styles?.claimCommandColor || claimTextColor || config.styles?.accentColor || '';
+            const claimTimerTextColor = config.styles?.claimTimerTextColor || config.styles?.claimTimerColor || config.styles?.closeTimerColor || '';
+            const claimTimerValueColor = config.styles?.claimTimerValueColor || config.styles?.claimTimerColor || config.styles?.closeTimerColor || '';
+            const claimTimerUrgentColor = config.styles?.claimTimerUrgentColor || '#ff4444';
+            const claimTimerUrgentSeconds = Math.max(1, Number(config.display?.claimTimerUrgentSeconds) || 10);
+
+            // Claim section only when pending
+            const claimTimerEnabled = config.enableClaimTimer !== false;
+            if (winner.status === 'pending' && config.display?.showClaimCommand !== false) {
+                claimSection.classList.add('active');
+
+                const claimCommandEl = container.querySelector('.claim-command');
+                if (claimCommandEl) {
+                    claimCommandEl.style.display = '';
+                    const claimTemplate = config.display?.claimCommandText || 'Type {command} to claim your prize!';
+                    const claimCommandString = config.giveawayData.claimCommand || '!claim';
+                    claimCommandEl.innerHTML = formatTemplate(claimTemplate, {
+                        command: `<span class="command-text">${escapeHtml(claimCommandString)}</span>`
+                    });
+                    claimCommandEl.style.color = claimTextColor || textColor || '';
+                    const cmdSpan = claimCommandEl.querySelector('.command-text') || claimCommandEl.querySelector('span');
+                    if (cmdSpan) {
+                        cmdSpan.style.color = claimCommandColor || claimTextColor || textColor || 'var(--accent-color)';
+                    }
+                }
+
+                const countdownEl = container.querySelector('.giveaway-countdown');
+                if (countdownEl && config.display?.showTimer !== false && claimTimerEnabled) {
+                    // Get remaining seconds
+                    const remainingSeconds = getClaimTimeRemainingForWinner(winner);
+                    const countdownColor = claimTimerValueColor || claimTimerTextColor || winnerColor || '';
+                    const normalCountdownColor = claimTimerTextColor || countdownColor;
+
+                    if (config.paused) {
+                        // When paused, show frozen countdown value
+                        clearClaimCountdown(countdownEl);
+                        countdownEl.classList.remove('urgent');
+                        if (remainingSeconds != null && remainingSeconds > 0) {
+                            countdownEl.style.display = '';
+                            countdownEl.style.color = normalCountdownColor || '';
+                            countdownEl.textContent = formatTime(remainingSeconds);
+                        } else {
+                            countdownEl.textContent = '';
+                            countdownEl.style.display = 'none';
+                        }
+                    } else if (remainingSeconds != null && remainingSeconds > 0) {
+                        // Active countdown
+                        countdownEl.style.display = '';
+                        countdownEl.style.color = normalCountdownColor || '';
+                        startCountdown(remainingSeconds, countdownEl, {
+                            normalColor: normalCountdownColor,
+                            urgentColor: claimTimerUrgentColor || '#ff4444',
+                            urgentThreshold: claimTimerUrgentSeconds
+                        });
+                    } else {
+                        // No valid remaining time
+                        countdownEl.textContent = '';
+                        countdownEl.style.display = 'none';
+                        clearClaimCountdown(countdownEl);
+                    }
+                } else if (countdownEl) {
+                    countdownEl.textContent = '';
+                    countdownEl.style.display = 'none';
+                    clearClaimCountdown(countdownEl);
+                }
+            } else {
+                claimSection.classList.remove('active');
+                clearClaimCountdown(container.querySelector('.giveaway-countdown'));
+            }
+
+            // Celebrate approved winners
+            const animateWinnerEnabled = config.display?.animateWinner !== false;
+
+            if (winner.status === 'approved' && animateWinnerEnabled) {
+                widget.classList.add('celebrating');
+                if (container.dataset.celebrated !== getWinnerIdentifier(winner)) {
+                    createConfetti(winnerSection);
+                    container.dataset.celebrated = getWinnerIdentifier(winner);
+                }
+            } else {
+                widget.classList.remove('celebrating');
+                container.dataset.celebrated = '';
+            }
+
+            activeWinnerId = getWinnerIdentifier(winner);
+        }
+
+        function updateTicker(container, config) {
+            const ticker = container.querySelector('.infoTicker');
+            if (!ticker) return;
+
+            if (config.display?.imageOnlyMode) {
+                ticker.style.display = 'none';
+                ticker.dataset.currentLabel = '';
+                clearTicker();
+                return;
+            }
+
+            if (!config.display?.minimalMode) {
+                ticker.style.display = 'none';
+                ticker.dataset.currentLabel = '';
+                clearTicker();
+                return;
+            }
+
+            const labelEl = ticker.querySelector('.label');
+            const valueEl = ticker.querySelector('.value');
+            if (!labelEl || !valueEl) return;
+
+            const textColor = config.styles?.textColor || '';
+            const entryCommandColor = config.styles?.entryCommandColor || '';
+            const claimCommandColor = config.styles?.claimCommandColor || '';
+            const closeTimerTextColor = config.styles?.closeTimerTextColor || config.styles?.closeTimerColor || '';
+            const closeTimerValueColor = config.styles?.closeTimerValueColor || config.styles?.closeTimerColor || '';
+            const claimTimerTextColor = config.styles?.claimTimerTextColor || config.styles?.claimTimerColor || config.styles?.closeTimerColor || '';
+            const claimTimerValueColor = config.styles?.claimTimerValueColor || config.styles?.claimTimerColor || config.styles?.closeTimerColor || '';
+            const closeTimerUrgentColor = config.styles?.closeTimerUrgentColor || '#ff4444';
+            const claimTimerUrgentColor = config.styles?.claimTimerUrgentColor || closeTimerUrgentColor;
+            const closeTimerUrgentSeconds = Math.max(1, Number(config.display?.closeTimerUrgentSeconds) || 30);
+            const claimTimerUrgentSeconds = Math.max(1, Number(config.display?.claimTimerUrgentSeconds) || 10);
+            const winnerColor = config.styles?.winnerColor || '';
+            const entryNumberColor = config.styles?.entryNumberColor || textColor || '';
+            const statusColors = getStatusColors(config);
+
+            const messages = [];
+            const entryCommand = config.giveawayData.entryCommand || '!enter';
+            const claimCommand = config.giveawayData.claimCommand || '!claim';
+            const entries = config.totalEntries || 0;
+            const entriesClosed = !!config.entriesClosed;
+            const hasPendingWinner = (config.pendingWinners && config.pendingWinners.length > 0) || false;
+            const statusText = getStatusText(config, hasPendingWinner, entriesClosed);
+            const isStatusOpen = statusText.toLowerCase() === 'open';
+
+            if (!isStatusOpen) {
+                messages.push({
+                    label: 'Status',
+                    value: statusText,
+                    valueColor: getStatusValueColor(statusText, statusColors) || textColor || ''
+                });
+            } else if (config.display?.showEntryCommand !== false) {
+                // Entry command
+                messages.push({
+                    label: 'Enter',
+                    value: entryCommand,
+                    valueColor: entryCommandColor || textColor || ''
+                });
+            }
+
+            // Entry count
+            if (config.display?.showEntryCount !== false && !hasPendingWinner) {
+                messages.push({
+                    label: config.giveawayData?.statLabelText || 'ENTRIES',
+                    value: entries.toString(),
+                    valueColor: entryNumberColor
+                });
+            }
+
+            // Close timer
+            const closeTimeRemaining = entriesClosed ? null : getCloseTimeRemaining();
+            if (closeTimeRemaining && config.display?.showCloseTimer !== false && !config.ended) {
+                messages.push({
+                    label: 'Time Left',
+                    value: formatTime(closeTimeRemaining),
+                    dynamic: 'closeTime',
+                    valueColor: closeTimerValueColor || textColor || ''
+                });
+            }
+
+            const latestWinner = (config.pendingWinners && config.pendingWinners[0])
+                || (config.winners && config.winners[config.winners.length - 1]);
+
+            // Winner display
+            if (latestWinner && config.display?.showWinner !== false) {
+                messages.push({
+                    label: 'Winner',
+                    value: latestWinner.username,
+                    valueColor: winnerColor || textColor || ''
+                });
+            }
+
+            // Claim command
+            if (latestWinner && latestWinner.status === 'pending' && config.display?.showClaimCommand !== false) {
+                messages.push({
+                    label: 'Claim',
+                    value: claimCommand,
+                    valueColor: claimCommandColor || textColor || ''
+                });
+            }
+
+            // Claim timer
+            if (latestWinner && latestWinner.status === 'pending' && config.display?.showTimer !== false) {
+                const claimRemaining = getClaimTimeRemainingForWinner(latestWinner);
+                if (claimRemaining > 0) {
+                    messages.push({
+                        label: 'Claim Timer',
+                        value: formatTime(claimRemaining),
+                        dynamic: 'claimTime',
+                        valueColor: claimTimerValueColor || textColor || ''
+                    });
+                }
+            }
+
+            if (messages.length === 0) {
+                ticker.style.display = 'none';
+                ticker.dataset.currentLabel = '';
+                clearTicker();
+                return;
+            }
+
+            ticker.style.display = 'flex';
+            const currentLabel = (ticker.dataset.currentLabel || labelEl.textContent || '').replace(/:$/, '').trim();
+            const startIndex = currentLabel
+                ? Math.max(0, messages.findIndex(m => m.label === currentLabel))
+                : 0;
+
+            clearTicker();
+            tickerMessages = messages;
+            tickerIndex = startIndex;
+
+            const computeValueState = (msg) => {
+                let value = msg.value;
+                let urgent = false;
+                const paused = isOverlayPaused;
+                if (msg.dynamic === 'closeTime') {
+                    const remaining = getCloseTimeRemaining();
+                    value = remaining ? formatTime(remaining) : '0s';
+                    urgent = !paused && !!remaining && remaining <= closeTimerUrgentSeconds;
+                } else if (msg.dynamic === 'claimTime' && latestWinner && latestWinner.claimDeadline) {
+                    const claimRemaining = getClaimTimeRemainingForWinner(latestWinner);
+                    value = claimRemaining != null ? formatTime(claimRemaining) : '';
+                    urgent = !paused && claimRemaining != null && claimRemaining <= claimTimerUrgentSeconds;
+                }
+                return { value, urgent };
+            };
+
+            const applyDisplay = (msg, { skipLabel } = {}) => {
+                const { value, urgent } = computeValueState(msg);
+                if (!skipLabel) {
+                    labelEl.textContent = `${msg.label}:`;
+                    const labelColor = msg.label === 'Time Left'
+                        ? (closeTimerTextColor || statusColors.label || '')
+                        : (msg.label === 'Claim Timer'
+                            ? (claimTimerTextColor || statusColors.label || '')
+                            : (statusColors.label || ''));
+                    labelEl.style.color = labelColor;
+                }
+                const baseColor = msg.valueColor || textColor || '';
+                const urgentColor = msg.dynamic === 'closeTime'
+                    ? closeTimerUrgentColor
+                    : (msg.dynamic === 'claimTime' ? claimTimerUrgentColor : closeTimerUrgentColor);
+                const finalColor = urgent ? urgentColor : baseColor;
+                valueEl.textContent = value;
+                valueEl.style.color = finalColor || '';
+                valueEl.classList.toggle('urgent', urgent);
+                valueEl.classList.toggle('entries-active', msg.label === 'Entries');
+                if (!skipLabel) {
+                    valueEl.classList.remove('entry-burst');
+                    if (msg.label === 'Entries' && tickerEntryBurstPending) {
+                        triggerEntryBurst(valueEl);
+                        tickerEntryBurstPending = false;
+                    }
+                    ticker.dataset.currentLabel = msg.label;
+                }
+                msg.value = value;
+            };
+
+            applyDisplay(tickerMessages[tickerIndex % tickerMessages.length]);
+
+            // Update dynamic values while displayed
+            tickerUpdateInterval = setInterval(() => {
+                if (!tickerMessages.length) return;
+                const msg = tickerMessages[tickerIndex % tickerMessages.length];
+                if (!msg) return;
+                applyDisplay(msg, { skipLabel: true });
+            }, 1000);
+
+            // Rotation interval to switch between messages
+            const intervalMs = Math.max(1, Number(config.display?.tickerIntervalSeconds) || 2) * 1000;
+            tickerInterval = setInterval(() => {
+                tickerIndex += 1;
+                const msg = tickerMessages[tickerIndex % tickerMessages.length];
+                if (!msg) return;
+                applyDisplay(msg);
+            }, intervalMs);
+        }
+
+        function updateGiveawayDisplay(config) {
+            if (!config || !config.giveawayData) {
+                console.error('Missing config or giveawayData');
+                return;
+            }
+
+            // Ensure display config is available and merged with nested display data
+            if (config.giveawayData?.display || config.display) {
+                config.display = {
+                    ...(config.giveawayData?.display || {}),
+                    ...(config.display || {})
+                };
+            }
+            latestConfigStyles = config.styles || {};
+            latestConfigDisplay = config.display || {};
+
+            const giveawayId = getGiveawayId(config.giveawayTitle);
+            let container = document.getElementById(giveawayId);
+
+            if (!container) {
+                console.error(`No container found for giveaway ${giveawayId}`);
+                return;
+            }
+
+            // Scope CSS so this giveaway's styles don't leak or get overridden by other overlay items/styles
+            ensureScopedStylesFor(giveawayId);
+
+            const widget = container.querySelector('.giveawayWidget');
+            if (!widget) return;
+
+            // Update latest style/display references first so the fast path has correct colors
+            latestConfigStyles = config.styles || latestConfigStyles || {};
+            latestConfigDisplay = config.display || latestConfigDisplay || {};
+
+            // If the backend marks this as an entry-only update, stop immediately
+            if (config.entriesOnly === true) {
+                applyEntryOnlyUpdate(container, giveawayId, config);
+                return;
+            }
+
+            if (config.display?.disabled) {
+                container.style.display = 'none';
+                return;
+            } else {
+                container.style.display = '';
+            }
+
+            clearSwapInterval();
+            clearSlideCycle();
+            clearSlideImageCycle();
+
+            const giveawayContainer = container.querySelector('.giveawayContainer');
+            const displayMode = config.display?.displayMode || 'widgetImage';
+            const widgetMode = config.display?.widgetMode || 'full';
+            const usesWidget = displayMode !== 'imageOnly';
+            const usesImage = displayMode !== 'widgetOnly';
+            const imageOnly = displayMode === 'imageOnly';
+            const tickerOnly = usesWidget && (widgetMode === 'ticker' || config.display?.tickerOnly);
+            const minimalFromWidgetMode = usesWidget && (widgetMode === 'minimal' || widgetMode === 'ticker');
+            const isMinimal = minimalFromWidgetMode || (!!config.display?.minimalMode && usesWidget);
+            const entriesClosed = !!config.entriesClosed;
+            const isPaused = !!config.paused;
+            const wasPaused = isOverlayPaused;
+            isOverlayPaused = isPaused;
+            if (wasPaused !== isPaused) {
+                claimTimerState = {};
+            }
+            pausedCloseRemaining = isPaused
+                ? (typeof config.pausedCloseRemainingSeconds === 'number'
+                    ? config.pausedCloseRemainingSeconds
+                    : computeRemainingSeconds(config.closeTime))
+                : null;
+            pausedClaimState = isPaused && config.pausedClaimRemaining
+                ? config.pausedClaimRemaining
+                : {};
+
+            if (config.display) {
+                config.display.imageOnlyMode = imageOnly;
+                config.display.tickerOnly = tickerOnly;
+                config.display.minimalMode = isMinimal;
+                config.display.widgetMode = widgetMode;
+                config.display.displayMode = displayMode;
+            }
+
+            container.classList.toggle('minimal', isMinimal);
+            container.classList.toggle('image-only', imageOnly);
+            if (giveawayContainer) {
+                giveawayContainer.classList.toggle('image-only', imageOnly);
+            }
+            widget.classList.toggle('minimal', isMinimal);
+            widget.classList.toggle('ticker-only', tickerOnly);
+            widget.style.display = usesWidget ? '' : 'none';
+            const overlayImageWrapper = container.querySelector('.imageWrapper');
+            const pausedOverlayEl = container.querySelector('.pausedOverlay');
+            const endedOverlayEl = container.querySelector('.endedOverlay');
+            const overlayParent = usesWidget
+                ? widget
+                : (imageOnly && overlayImageWrapper ? overlayImageWrapper : (giveawayContainer || container));
+            if (pausedOverlayEl && overlayParent && pausedOverlayEl.parentElement !== overlayParent) {
+                overlayParent.appendChild(pausedOverlayEl);
+            }
+            if (endedOverlayEl && overlayParent && endedOverlayEl.parentElement !== overlayParent) {
+                overlayParent.appendChild(endedOverlayEl);
+            }
+            if (giveawayContainer) {
+                const hideImageWhilePaused = false; // set after showImage is computed
+                giveawayContainer.classList.toggle('paused-image-hidden', hideImageWhilePaused);
+            }
+
+            const giveawayScale = Math.max(0.1, Number(config.styles?.giveawayScale) || 1);
+            const giveawayWidthRaw = config.styles?.giveawayWidth;
+            const giveawayWidth = typeof giveawayWidthRaw === 'number'
+                ? `${giveawayWidthRaw}px`
+                : (giveawayWidthRaw || '350px');
+            const giveawayWidthNumber = typeof giveawayWidthRaw === 'number'
+                ? giveawayWidthRaw
+                : (parseFloat(giveawayWidth) || 350);
+            const entryNumberColor = config.styles?.entryNumberColor || config.styles?.textColor || '#e3e3e3';
+            widget.style.setProperty('--background-color', config.styles?.backgroundColor || '#111111');
+            widget.style.setProperty('--accent-color', config.styles?.accentColor || '#a60000');
+            widget.style.setProperty('--text-color', config.styles?.textColor || '#e3e3e3');
+            widget.style.setProperty('--title-color', config.styles?.titleColor || '#e3e3e3');
+            widget.style.setProperty('--winner-color', config.styles?.winnerColor || '#ffcc00');
+            widget.style.setProperty('--shadow-color', config.styles?.shadowColor || '#a60000');
+            widget.style.setProperty('--close-timer-urgent-color', config.styles?.closeTimerUrgentColor || '#ff4444');
+            widget.style.setProperty('--paused-overlay-color', config.styles?.statusPausedColor || config.styles?.accentColor || '#a60000');
+            widget.style.setProperty('--giveaway-scale', giveawayScale);
+            widget.style.setProperty('--giveaway-width', giveawayWidth);
+            widget.style.setProperty('--font-size', config.styles?.fontSize || '24px');
+            widget.style.setProperty('--entry-number-color', entryNumberColor);
+
+            const containerEl = container.querySelector('.giveawayContainer');
+            if (containerEl) {
+                containerEl.style.setProperty('--giveaway-width', giveawayWidth);
+            }
+
+            const imageElement = container.querySelector('.giveawayImage');
+            const imageUrl = resolveImageUrl(config.styles);
+            const rawPlacement = config.styles?.imagePlacement;
+            let placement = usesImage ? (rawPlacement || 'above') : 'none';
+
+            if (!usesWidget && usesImage) {
+                placement = 'above';
+            }
+
+            if (config.styles?.showImage === false && usesImage && (!rawPlacement || rawPlacement === 'above' || rawPlacement === 'background' || rawPlacement === 'below')) {
+                placement = 'none';
+            }
+
+            if (imageOnly && placement === 'background') {
+                placement = 'above';
+            }
+
+            const useBackground = placement === 'background' && usesWidget;
+            const isLeftPlacement = placement === 'left';
+            const isRightPlacement = placement === 'right';
+            const isHorizontalPlacement = isLeftPlacement || isRightPlacement;
+            const isBelowPlacement = placement === 'below';
+            const isAbovePlacement = !isBelowPlacement && !isHorizontalPlacement;
+            const safeImageUrl = imageUrl ? imageUrl.replace(/"/g, '\\"') : '';
+            const imageEnabled = usesImage && placement !== 'none' && config.styles?.showImage !== false;
+            const showImage = (imageEnabled || imageOnly) && !!imageUrl;
+            const hasImage = !!imageUrl && (imageEnabled || imageOnly);
+            const imageScale = Math.max(0.1, Number(config.styles?.imageScale) || 1);
+            const targetImageHeight = Math.max(20, 220 * imageScale);
+            const targetImageWidth = Math.max(20, giveawayWidthNumber * imageScale);
+            const imageWidthValue = `${targetImageWidth}px`;
+            const imageMarginValue = isHorizontalPlacement ? '0' : '0 auto';
+            if (containerEl) {
+                containerEl.style.setProperty('--target-image-height', `${targetImageHeight}px`);
+                containerEl.classList.toggle('horizontal', isHorizontalPlacement);
+                containerEl.classList.toggle('has-image', hasImage);
+                containerEl.classList.toggle('image-left', hasImage && isLeftPlacement);
+                containerEl.classList.toggle('image-right', hasImage && isRightPlacement);
+                containerEl.classList.toggle('image-below', hasImage && isBelowPlacement);
+                containerEl.classList.toggle('image-above', hasImage && isAbovePlacement && !useBackground);
+                containerEl.style.width = isHorizontalPlacement ? 'auto' : giveawayWidth;
+                containerEl.style.maxWidth = isHorizontalPlacement ? 'none' : giveawayWidth;
+            }
+
+            container.classList.toggle('has-image', hasImage);
+            if (giveawayContainer) {
+                const hideImageWhilePaused = isPaused && usesWidget && usesImage && !imageOnly && showImage;
+                giveawayContainer.classList.toggle('paused-image-hidden', hideImageWhilePaused);
+            }
+
+            if (imageElement) {
+                if (showImage && !useBackground) {
+                    imageElement.src = imageUrl;
+                    imageElement.classList.add('visible');
+                } else {
+                    imageElement.src = '';
+                    imageElement.classList.remove('visible');
+                }
+            }
+
+            clearImageTextInterval();
+            const imageTextEl = container.querySelector('.image-text');
+            const imageWrapper = container.querySelector('.imageWrapper');
+            const showImageText = !!(config.display?.showImageText && showImage && !useBackground && !isPaused && imageTextEl && imageWrapper);
+            if (imageTextEl) {
+                if (!showImageText) {
+                    imageTextEl.style.display = 'none';
+                    imageTextEl.textContent = '';
+                } else {
+                    const hasPendingWinner = (config.pendingWinners || []).some(w => w.status === 'pending');
+                    const template = config.display?.imageTextTemplate || '{title} - {prize}';
+                    const position = (config.display?.imageTextPosition || 'bottom').toLowerCase();
+                    const sizePx = Math.max(8, Number(config.display?.imageTextSize) || 18);
+                    const positions = ['top', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right', 'center', 'center-left', 'center-right'];
+                    positions.forEach(p => imageTextEl.classList.remove(p));
+                    imageTextEl.classList.add(positions.includes(position) ? position : 'bottom');
+                    imageTextEl.style.fontSize = `${sizePx}px`;
+                    const textColor = config.styles?.imageTextColor || config.styles?.textColor || '#e3e3e3';
+                    const placeholderColor = config.styles?.imageTextPlaceholderColor || textColor;
+                    imageTextEl.style.color = textColor;
+
+                    const computeText = () => {
+                        const status = getStatusText(config, hasPendingWinner, entriesClosed);
+                        const timeRemaining = getTimeRemainingForDisplay(config, hasPendingWinner);
+                        const replacements = {
+                            prize: `<span class="image-text-placeholder" style="color:${placeholderColor};">${escapeHtml(config.giveawayData?.prize || '')}</span>`,
+                            title: `<span class="image-text-placeholder" style="color:${placeholderColor};">${escapeHtml(config.giveawayData?.title || '')}</span>`,
+                            entrycommand: `<span class="image-text-placeholder" style="color:${placeholderColor};">${escapeHtml(config.giveawayData?.entryCommand || '')}</span>`,
+                            claimcommand: `<span class="image-text-placeholder" style="color:${placeholderColor};">${escapeHtml(config.giveawayData?.claimCommand || '')}</span>`,
+                            entries: `<span class="image-text-placeholder" style="color:${placeholderColor};">${String(config.totalEntries || 0)}</span>`,
+                            status: `<span class="image-text-placeholder" style="color:${placeholderColor};">${escapeHtml(status)}</span>`,
+                            time: `<span class="image-text-placeholder" style="color:${placeholderColor};">${timeRemaining != null ? formatTime(timeRemaining) : ''}</span>`
+                        };
+                        imageTextEl.innerHTML = formatTemplate(template, replacements);
+                    };
+
+                    computeText();
+                    if (template.includes('{time}')) {
+                        imageTextInterval = setInterval(computeText, 1000);
+                    }
+                    imageTextEl.style.display = 'block';
+                }
+            }
+
+            if (showImage && safeImageUrl && useBackground) {
+                widget.classList.add('bg-image');
+                widget.style.backgroundImage = `url(\"${safeImageUrl}\")`;
+                if (config.styles?.imageOverlay !== false) {
+                    widget.classList.add('dim');
+                } else {
+                    widget.classList.remove('dim');
+                }
+            } else {
+                widget.classList.remove('bg-image');
+                widget.classList.remove('dim');
+                widget.style.backgroundImage = '';
+            }
+
+            if (containerEl) {
+                containerEl.classList.remove('slide-cycle', 'slide-showing', 'slide-image', 'slide-image-showing', 'swap-mode');
+                containerEl.style.removeProperty('--slide-target-height');
+                containerEl.style.removeProperty('--slide-target-width');
+                containerEl.style.removeProperty('--slide-fixed-height');
+                containerEl.style.removeProperty('--slide-image-target-height');
+                containerEl.style.removeProperty('--slide-image-target-width');
+                containerEl.style.removeProperty('--swap-slot-height');
+                containerEl.style.removeProperty('min-height');
+            }
+
+            const slideModeRaw = (config.display?.slideMode || 'disabled').toString().toLowerCase();
+            const slideModeBase = usesWidget && usesImage ? slideModeRaw : 'disabled';
+            const slideCycleEnabled = slideModeBase === 'widget';
+            const revealIntervalSeconds = Math.max(1, Number(config.display?.slideRevealIntervalSeconds) || 8);
+            const visibleSeconds = Math.max(1, Number(config.display?.slideVisibleSeconds) || 4);
+            const slideImageEnabled = slideModeBase === 'image';
+            const imageCycleEnabled = slideModeBase === 'cycle';
+
+            // Rotation modes should only run while the giveaway is actively accepting entries, no cycling/sliding if there is a pending winner or a completed winner
+            const hasPendingWinnerForRotation = Array.isArray(config.pendingWinners)
+                && config.pendingWinners.some(w => w && (w.status === 'pending' || w.status === 'claimed'));
+            const hasCompletedWinnerForRotation = Array.isArray(config.winners) && config.winners.length > 0;
+            const allowRotationByState = !entriesClosed && !isPaused && !config.ended
+                && !hasPendingWinnerForRotation
+                && !hasCompletedWinnerForRotation;
+
+            const canSlideCycle = allowRotationByState && slideCycleEnabled && usesWidget && usesImage && showImage && !useBackground && !slideImageEnabled && !imageCycleEnabled;
+            const canSlideImage = allowRotationByState && slideImageEnabled && usesWidget && usesImage && showImage && !useBackground && !slideCycleEnabled && !imageCycleEnabled;
+            const canCycleImage = allowRotationByState && imageCycleEnabled && usesWidget && usesImage && showImage && !useBackground && !canSlideCycle && !canSlideImage;
+            const cycleSeconds = Math.max(2, Number(config.display?.cycleIntervalSeconds) || 6);
+
+            if (!canCycleImage && !canSlideCycle && !canSlideImage) {
+                clearSwapInterval();
+                clearSlideCycle();
+                clearSlideImageCycle();
+                swapShowingImage = false;
+                if (containerEl) {
+                    containerEl.style.removeProperty('min-height');
+                    containerEl.style.removeProperty('display');
+                    containerEl.classList.remove('slide-cycle');
+                    containerEl.classList.remove('slide-showing');
+                    containerEl.classList.remove('slide-image');
+                    containerEl.classList.remove('slide-image-showing');
+                    containerEl.classList.remove('cycle-mode');
+                    containerEl.style.removeProperty('--slide-target-height');
+                    containerEl.style.removeProperty('--slide-target-width');
+                    containerEl.style.removeProperty('--slide-image-target-height');
+                    containerEl.style.removeProperty('--slide-image-target-width');
+                }
+                const imageWrapper = containerEl ? containerEl.querySelector('.imageWrapper') : null;
+                if (imageWrapper) {
+                    imageWrapper.style.opacity = '';
+                    imageWrapper.style.pointerEvents = '';
+                    imageWrapper.style.gridArea = '';
+                    imageWrapper.style.transition = '';
+                }
+                widget.style.display = imageOnly ? 'none' : '';
+                widget.style.opacity = '';
+                widget.style.pointerEvents = '';
+                widget.style.gridArea = '';
+                widget.style.transition = '';
+                if (imageElement) {
+                    imageElement.style.display = showImage && !useBackground ? 'block' : 'none';
+                    imageElement.style.width = imageWidthValue;
+                    imageElement.style.maxWidth = imageWidthValue;
+                    imageElement.style.height = `${targetImageHeight}px`;
+                    imageElement.style.maxHeight = `${targetImageHeight}px`;
+                    imageElement.style.margin = imageMarginValue;
+                    imageElement.style.transformOrigin = '';
+                    imageElement.style.transform = '';
+                    imageElement.style.opacity = '';
+                    imageElement.style.pointerEvents = '';
+                }
+            } else if (canSlideCycle) {
+                clearSwapInterval();
+                clearSlideCycle();
+                if (containerEl) {
+                    containerEl.classList.add('slide-cycle');
+                    containerEl.classList.remove('slide-image');
+                    containerEl.classList.remove('slide-image-showing');
+                    containerEl.classList.remove('swap-mode');
+                    containerEl.style.removeProperty('--swap-slot-height');
+                    containerEl.style.removeProperty('min-height');
+                }
+
+                // Temporarily show widget to get accurate measurement
+                widget.style.display = '';
+                widget.style.maxHeight = 'none';
+                widget.style.maxWidth = 'none';
+                widget.style.opacity = '1';
+
+                if (containerEl) {
+                    const measuredWidth = widget.scrollWidth || widget.offsetWidth || widget.getBoundingClientRect().width || 0;
+                    const measuredHeight = widget.scrollHeight || widget.offsetHeight || widget.getBoundingClientRect().height || 0;
+
+                    const fallbackWidth = giveawayWidthNumber;
+                    const finalWidth = Math.max(measuredWidth, fallbackWidth);
+
+                    if (isHorizontalPlacement) {
+                        if (finalWidth > 0) {
+                            containerEl.style.setProperty('--slide-target-width', `${finalWidth + 24}px`);
+                        }
+                        if (measuredHeight > 0) {
+                            containerEl.style.setProperty('--slide-fixed-height', `${measuredHeight}px`);
+                        }
+                    } else {
+                        containerEl.style.removeProperty('--slide-target-width');
+                        containerEl.style.removeProperty('--slide-fixed-height');
+                        if (measuredHeight > 0) {
+                            containerEl.style.setProperty('--slide-target-height', `${measuredHeight + 24}px`);
+                        }
+                    }
+                }
+
+                // Reset widget styles
+                widget.style.maxHeight = '';
+                widget.style.maxWidth = '';
+                widget.style.opacity = '';
+
+                if (imageElement) {
+                    imageElement.style.display = 'block';
+                    imageElement.style.width = imageWidthValue;
+                    imageElement.style.maxWidth = imageWidthValue;
+                    imageElement.style.height = `${targetImageHeight}px`;
+                    imageElement.style.maxHeight = `${targetImageHeight}px`;
+                    imageElement.style.margin = imageMarginValue;
+                }
+                widget.style.display = '';
+
+                const applySlideState = (showWidgetNow) => {
+                    if (!containerEl) return;
+                    if (showWidgetNow) {
+                        // Measure widget size for accurate max dimension
+                        const currentSizeRaw = isHorizontalPlacement
+                            ? (widget.scrollWidth || widget.offsetWidth || widget.getBoundingClientRect().width || 0)
+                            : (widget.scrollHeight || widget.offsetHeight || 0);
+                        const currentSize = isHorizontalPlacement
+                            ? Math.max(currentSizeRaw, giveawayWidthNumber)
+                            : currentSizeRaw;
+                        if (currentSize > 0) {
+                            const sizeVar = isHorizontalPlacement ? '--slide-target-width' : '--slide-target-height';
+                            containerEl.style.setProperty(sizeVar, `${currentSize + 24}px`);
+                            if (!isHorizontalPlacement) {
+                                containerEl.style.removeProperty('--slide-target-width');
+                            }
+                        }
+                        // Use requestAnimationFrame to ensure smooth class addition
+                        requestAnimationFrame(() => {
+                            if (containerEl) {
+                                containerEl.classList.add('slide-showing');
+                            }
+                        });
+                    } else {
+                        containerEl.classList.remove('slide-showing');
+                    }
+                };
+
+                applySlideState(false);
+                const startCycle = () => {
+                    applySlideState(true);
+                    slideHideTimeout = setTimeout(() => {
+                        applySlideState(false);
+                        slideRevealTimeout = setTimeout(startCycle, revealIntervalSeconds * 1000);
+                    }, visibleSeconds * 1000);
+                };
+
+                slideRevealTimeout = setTimeout(startCycle, revealIntervalSeconds * 1000);
+            } else if (canSlideImage) {
+                // Reverse mode, Widget stays visible, image slides in/out
+                clearSwapInterval();
+                clearSlideCycle();
+                clearSlideImageCycle();
+                if (containerEl) {
+                    containerEl.classList.add('slide-image');
+                    containerEl.classList.remove('slide-cycle');
+                    containerEl.classList.remove('slide-showing');
+                    containerEl.classList.remove('swap-mode');
+                    containerEl.classList.remove('cycle-mode');
+                    containerEl.style.removeProperty('--slide-target-height');
+                    containerEl.style.removeProperty('--slide-target-width');
+                    containerEl.style.removeProperty('--swap-slot-height');
+                    containerEl.style.removeProperty('min-height');
+                }
+
+                // Widget is always visible
+                widget.style.display = '';
+                widget.style.maxHeight = '';
+                widget.style.opacity = '';
+
+                if (imageElement) {
+                    // Wrap image in container div
+                    let imageWrapper = imageElement.parentElement;
+                    if (!imageWrapper || !imageWrapper.classList.contains('image-slide-wrapper')) {
+                        imageWrapper = document.createElement('div');
+                        imageWrapper.className = 'image-slide-wrapper';
+                        imageElement.parentNode.insertBefore(imageWrapper, imageElement);
+                        imageWrapper.appendChild(imageElement);
+                    }
+
+                    // Set fixed size on image itself
+                    imageElement.style.display = 'block';
+                    imageElement.style.width = imageWidthValue;
+                    imageElement.style.maxWidth = imageWidthValue;
+                    imageElement.style.height = `${targetImageHeight}px`;
+                    imageElement.style.maxHeight = 'none';
+                    imageElement.style.margin = imageMarginValue;
+                    imageElement.classList.add('visible');
+
+                    // Set target dimension on wrapper for animation
+                    if (containerEl) {
+                        const measuredImageWidth = imageElement.getBoundingClientRect().width || targetImageWidth;
+                        containerEl.style.removeProperty('--slide-image-target-height');
+                        containerEl.style.removeProperty('--slide-image-target-width');
+                        if (isHorizontalPlacement) {
+                            containerEl.style.setProperty('--slide-image-target-width', `${measuredImageWidth + 24}px`);
+                        } else {
+                            containerEl.style.setProperty('--slide-image-target-height', `${targetImageHeight + 24}px`);
+                        }
+                    }
+                }
+
+                const applyImageSlideState = (showImageNow) => {
+                    if (!containerEl) return;
+                    if (showImageNow) {
+                        if (imageElement) {
+                            const measuredImageSize = isHorizontalPlacement
+                                ? (imageElement.getBoundingClientRect().width || targetImageWidth)
+                                : (imageElement.getBoundingClientRect().height || targetImageHeight);
+                            const sizeVar = isHorizontalPlacement ? '--slide-image-target-width' : '--slide-image-target-height';
+                            containerEl.style.setProperty(sizeVar, `${measuredImageSize + 24}px`);
+                            if (isHorizontalPlacement) {
+                                containerEl.style.removeProperty('--slide-image-target-height');
+                            } else {
+                                containerEl.style.removeProperty('--slide-image-target-width');
+                            }
+                        }
+                        requestAnimationFrame(() => {
+                            if (containerEl) {
+                                containerEl.classList.add('slide-image-showing');
+                            }
+                        });
+                    } else {
+                        containerEl.classList.remove('slide-image-showing');
+                    }
+                };
+
+                applyImageSlideState(false);
+                const startImageCycle = () => {
+                    applyImageSlideState(true);
+                    slideImageHideTimeout = setTimeout(() => {
+                        applyImageSlideState(false);
+                        slideImageRevealTimeout = setTimeout(startImageCycle, revealIntervalSeconds * 1000);
+                    }, visibleSeconds * 1000);
+                };
+
+                slideImageRevealTimeout = setTimeout(startImageCycle, revealIntervalSeconds * 1000);
+            } else {
+                clearSlideCycle();
+                clearSlideImageCycle();
+                if (containerEl) {
+                    containerEl.classList.remove('slide-cycle');
+                    containerEl.classList.remove('slide-showing');
+                    containerEl.classList.remove('slide-image');
+                    containerEl.classList.remove('slide-image-showing');
+                }
+                const widgetHeight = widget.getBoundingClientRect().height || widget.offsetHeight || 0;
+                const slotHeight = Math.max(widgetHeight, targetImageHeight);
+                const imageWrapper = containerEl ? containerEl.querySelector('.imageWrapper') : null;
+
+                if (containerEl) {
+                    containerEl.style.minHeight = `${slotHeight}px`;
+                    containerEl.style.display = 'grid';
+                    containerEl.classList.add('cycle-mode');
+                }
+
+                if (imageElement) {
+                    const baseHeight = imageScale > 0 ? targetImageHeight / imageScale : targetImageHeight;
+                    imageElement.style.display = 'block';
+                    imageElement.style.width = '100%';
+                    imageElement.style.maxWidth = '100%';
+                    imageElement.style.height = `${baseHeight}px`;
+                    imageElement.style.maxHeight = `${baseHeight}px`;
+                    imageElement.style.margin = imageMarginValue;
+                    imageElement.style.transformOrigin = 'center center';
+                    imageElement.style.transform = `scale(${imageScale})`;
+                }
+
+                if (imageWrapper) {
+                    imageWrapper.style.gridArea = '1 / 1';
+                    imageWrapper.style.transition = 'opacity 0.5s ease-in-out';
+                }
+
+                widget.style.display = 'block';
+                widget.style.gridArea = '1 / 1';
+                widget.style.transition = 'opacity 0.5s ease-in-out';
+
+                const applySwap = (showImageNow) => {
+                    swapShowingImage = showImageNow;
+                    if (imageWrapper) {
+                        imageWrapper.style.opacity = showImageNow ? '1' : '0';
+                        imageWrapper.style.pointerEvents = showImageNow ? 'auto' : 'none';
+                    }
+                    widget.style.opacity = showImageNow ? '0' : '1';
+                    widget.style.pointerEvents = showImageNow ? 'none' : 'auto';
+                };
+
+                clearSwapInterval();
+                applySwap(false);
+                swapInterval = setInterval(() => {
+                    applySwap(!swapShowingImage);
+                }, cycleSeconds * 1000);
+            }
+
+            const showTitle = config.display?.showTitle !== false;
+            const titleContainer = container.querySelector('.title');
+            if (titleContainer) {
+                titleContainer.style.display = showTitle ? '' : 'none';
+            }
+
+            const prizeVisibility = config.display?.prizeVisibility
+                || (config.display?.showPrize === false ? 'disabled'
+                    : (config.display?.showPrizeLabel === false ? 'prize-only' : 'label-prize'));
+            const showPrizeContainer = prizeVisibility !== 'disabled';
+            const showPrizeLabel = prizeVisibility === 'label-prize' || prizeVisibility === 'label-only';
+            const showPrizeValue = prizeVisibility === 'label-prize' || prizeVisibility === 'prize-only';
+            const prizeContainer = container.querySelector('.prizeContainer');
+            if (prizeContainer) {
+                prizeContainer.style.display = showPrizeContainer ? '' : 'none';
+            }
+            // Update title
+            const titleElement = container.querySelector('.title');
+            if (titleElement) {
+                titleElement.textContent = config.giveawayData.title;
+            }
+
+            // Update prize
+            const prizeElement = container.querySelector('.prize');
+            if (prizeElement) {
+                prizeElement.textContent = config.giveawayData.prize;
+                prizeElement.style.color = config.styles?.prizeColor || config.styles?.textColor || '';
+                prizeElement.style.display = showPrizeValue ? '' : 'none';
+            }
+            const prizeLabelEl = container.querySelector('.prize-label');
+            if (prizeLabelEl) {
+                prizeLabelEl.textContent = config.giveawayData.prizeLabelText || 'PRIZE';
+                prizeLabelEl.style.color = config.styles?.prizeLabelColor || '';
+                prizeLabelEl.style.display = showPrizeLabel ? '' : 'none';
+            }
+
+            // Update entries count
+            const entriesElement = container.querySelector('.entries-count');
+            if (entriesElement) {
+                entriesElement.style.color = entryNumberColor;
+                const newCount = config.totalEntries || 0;
+                const entryKey = giveawayId || 'default';
+                if (Number.isFinite(lastEntriesCountMap[entryKey]) && lastEntriesCountMap[entryKey] !== newCount) {
+                    triggerEntryBurst(entriesElement);
+                    tickerEntryBurstPending = true;
+                }
+                lastEntriesCountMap[entryKey] = newCount;
+                entriesElement.textContent = newCount;
+            }
+
+            // Update entry command and close timer
+            const pendingWinners = config.pendingWinners || [];
+            const hasPendingWinner = pendingWinners.length > 0;
+
+            // Update claim timer state for all pending winners
+            const currentPendingKeys = new Set();
+            for (const winner of pendingWinners) {
+                if (winner.status === 'pending') {
+                    updateClaimTimerState(winner);
+                    const key = winner.winId || getWinnerIdentifier(winner);
+                    currentPendingKeys.add(key);
+                }
+            }
+            // Clean up timer state for winners that are no longer pending
+            for (const key of Object.keys(claimTimerState)) {
+                if (!currentPendingKeys.has(key)) {
+                    delete claimTimerState[key];
+                }
+            }
+            const statusColors = getStatusColors(config);
+            const statusText = getStatusText(config, hasPendingWinner, entriesClosed);
+            const statusNotOpen = statusText.toLowerCase() !== 'open';
+            currentCloseTime = (!isPaused && !statusNotOpen) ? (config.closeTime || null) : null;
+
+            // Store close timer remaining seconds for accurate display
+            if (!isPaused && !statusNotOpen && typeof config.closeRemainingSeconds === 'number' && config.closeRemainingSeconds > 0) {
+                closeRemainingSecondsFromServer = config.closeRemainingSeconds;
+                closeTimerStartTime = Date.now();
+            } else if (isPaused || statusNotOpen || !config.closeTime) {
+                closeRemainingSecondsFromServer = null;
+                closeTimerStartTime = null;
+            }
+            const entryCommandElement = container.querySelector('.entry-command');
+            const closeTimerElement = container.querySelector('.close-timer-command');
+            const entryCommandText = config.display?.entryCommandText || 'Type {command} to join!';
+            const closeTimerText = config.display?.closeTimerText || 'Time left: {time}';
+            const winnerPendingText = config.display?.winnerPendingText || 'Winner pending';
+            const closeTimerTextColor = config.styles?.closeTimerTextColor || config.styles?.closeTimerColor || '';
+            const closeTimerValueColor = config.styles?.closeTimerValueColor || config.styles?.closeTimerColor || '';
+            const claimTimerTextColor = config.styles?.claimTimerTextColor || config.styles?.claimTimerColor || config.styles?.closeTimerColor || '';
+            const claimTimerValueColor = config.styles?.claimTimerValueColor || config.styles?.claimTimerColor || config.styles?.closeTimerColor || '';
+            const entryTextColor = config.styles?.entryTextColor || config.styles?.textColor || '';
+            const claimTextColor = config.styles?.claimTextColor || config.styles?.textColor || '';
+            const entryCommandString = config.giveawayData.entryCommand || '!enter';
+            const entryCommandHtml = formatTemplate(entryCommandText, {
+                command: `<span class="command-text">${escapeHtml(entryCommandString)}</span>`
+            });
+
+            if (entryCommandElement) {
+                if (statusNotOpen) {
+                    const statusDisplay = hasPendingWinner ? winnerPendingText : statusText;
+                    entryCommandElement.textContent = statusDisplay;
+                    entryCommandElement.classList.add('entries-closed');
+                    const closedColor = getStatusValueColor(statusDisplay, statusColors)
+                        || entryTextColor
+                        || config.styles?.entriesClosedColor
+                        || '';
+                    entryCommandElement.style.color = closedColor;
+                } else {
+                    entryCommandElement.innerHTML = entryCommandHtml;
+                    entryCommandElement.classList.remove('entries-closed');
+                    entryCommandElement.style.color = entryTextColor || '';
+                    const cmdSpan = entryCommandElement.querySelector('.command-text') || entryCommandElement.querySelector('span');
+                    if (cmdSpan) {
+                        cmdSpan.style.color = config.styles?.entryCommandColor || entryTextColor || 'var(--accent-color)';
+                    }
+                }
+            }
+
+            if (closeTimerElement) {
+                const closeTimerHtml = formatTemplate(closeTimerText, {
+                    command: `<span class="command-text">${escapeHtml(entryCommandString)}</span>`,
+                    time: '<span class="close-timer-value"></span>'
+                });
+                closeTimerElement.innerHTML = closeTimerHtml;
+                const closeColorText = closeTimerTextColor || '';
+                const closeColorValue = closeTimerValueColor || closeColorText || '';
+                closeTimerElement.style.color = closeColorText || '';
+                const timeSpan = closeTimerElement.querySelector('.close-timer-value');
+                if (timeSpan) {
+                    timeSpan.style.color = closeColorValue || '';
+                }
+                const cmdSpanTimer = closeTimerElement.querySelector('.command-text');
+                if (cmdSpanTimer) {
+                    cmdSpanTimer.style.color = config.styles?.entryCommandColor || closeColorValue || 'var(--accent-color)';
+                }
+            }
+
+            if (statusNotOpen) {
+                if (entryCommandElement) entryCommandElement.style.display = '';
+                if (closeTimerElement) {
+                    closeTimerElement.style.display = 'none';
+                    closeTimerElement.classList.remove('urgent');
+                }
+                clearCommandCycle();
+            } else if (isMinimal) {
+                // In minimal mode, ticker handles display
+                if (entryCommandElement) entryCommandElement.style.display = 'none';
+                if (closeTimerElement) closeTimerElement.style.display = 'none';
+                clearCommandCycle();
+            } else if (entryCommandElement && closeTimerElement) {
+                // In full mode, start command cycling
+                startCommandCycle(container, config, entryCommandElement, closeTimerElement);
+            }
+
+            // Handle winner section
+            const winnerSection = container.querySelector('.winnerSection');
+            const claimSection = container.querySelector('.claimSection');
+            const completedWinners = config.winners || [];
+            const rotationEnabled = !!config.display?.rotateWinners;
+            const rotationPool = rotationEnabled
+                ? [...pendingWinners, ...completedWinners]
+                : (pendingWinners.length > 0
+                    ? pendingWinners
+                    : (completedWinners.length > 0 ? [completedWinners[completedWinners.length - 1]] : []));
+
+            const rotationSeconds = Math.max(1, Number(config.display?.pendingWinnerRotationSeconds) || 5);
+
+            const existingIndex = rotationPool.findIndex(w => getWinnerIdentifier(w) === activeWinnerId);
+            activeRotationIndex = existingIndex >= 0 ? existingIndex : 0;
+
+            if (imageOnly) {
+                clearRotation();
+                renderWinner(container, widget, config, null);
+            } else if (rotationPool.length === 0 || config.display?.showWinner === false) {
+                clearRotation();
+                renderWinner(container, widget, config, null);
+            } else {
+                const renderAtIndex = (index) => {
+                    if (rotationPool.length === 0) return;
+                    activeRotationIndex = index % rotationPool.length;
+                    const current = rotationPool[activeRotationIndex];
+                    renderWinner(container, widget, config, current);
+                };
+
+                clearRotation();
+                renderAtIndex(activeRotationIndex);
+
+                if (rotationEnabled && rotationPool.length > 1) {
+                    rotationInterval = setInterval(() => {
+                        renderAtIndex(activeRotationIndex + 1);
+                    }, rotationSeconds * 1000);
+                }
+            }
+
+            // Handle paused state
+            const pausedOverlay = container.querySelector('.pausedOverlay');
+            if (pausedOverlay) {
+                if (config.paused) {
+                    pausedOverlay.classList.add('active');
+                } else {
+                    pausedOverlay.classList.remove('active');
+                }
+            }
+
+            // Handle ended state
+            const endedOverlay = container.querySelector('.endedOverlay');
+            if (endedOverlay) {
+                const hasVisibleWinner = rotationPool && rotationPool.length > 0;
+                if (config.ended && !hasVisibleWinner) {
+                    endedOverlay.classList.add('active');
+                } else {
+                    endedOverlay.classList.remove('active');
+                }
+            }
+
+            // Stats visibility
+            const statsContainer = container.querySelector('.statsContainer');
+            if (statsContainer) {
+                const showEntryCount = config.display?.showEntryCount !== false;
+                statsContainer.style.padding = showEntryCount ? '' : '2px 20px';
+                const stat = statsContainer.querySelector('.stat');
+                if (stat) {
+                    stat.style.display = showEntryCount ? '' : 'none';
+                }
+                const statLabel = statsContainer.querySelector('.stat-label');
+                if (statLabel) {
+                    statLabel.textContent = config.giveawayData.statLabelText || 'ENTRIES';
+                    statLabel.style.color = config.styles?.statLabelColor || '';
+                }
+            }
+
+            updateTicker(container, config);
+        }
+
+        function startGiveawayAnimation(container) {
+            const widget = container.querySelector('.giveawayWidget');
+            if (widget) {
+                widget.classList.remove('starting');
+                void widget.offsetWidth;
+                widget.classList.add('starting');
+                setTimeout(() => widget.classList.remove('starting'), 600);
+            }
+        }
+
+        // Handle initial display
+        if (CONFIG && CONFIG.giveawayData) {
+            console.log('Initial giveaway display:', CONFIG);
+            updateGiveawayDisplay(CONFIG);
+        }
+
+        // Handle giveaway system updates
+        window.addEventListener('giveawaySystemUpdate', (event) => {
+            console.log('Received giveawaySystemUpdate event:', event);
+            const { detail } = event;
+
+            if (!detail || !detail.config) {
+                console.error('Missing detail or config in update event');
+                return;
+            }
+
+            console.log('Processing update with config:', detail.config);
+
+            if (detail.show) {
+                const giveawayId = getGiveawayId(detail.config.giveawayTitle);
+                const container = document.getElementById(giveawayId);
+                if (container) {
+                    startGiveawayAnimation(container);
+                }
+            }
+
+            updateGiveawayDisplay(detail.config);
+        });
+    </script>
+</div>
