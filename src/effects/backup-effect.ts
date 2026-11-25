@@ -1,140 +1,92 @@
-import { Firebot } from "@crowbartools/firebot-custom-scripts-types";
-import backupTemplate from "../templates/backup-template.html";
-import { logger } from "../logger";
-import { giveawayManager } from "../utility/giveaway-manager";
-import { BackupEffectModel, BackupGiveaway } from "../types/types";
-
-/**
- * Giveaway backup manager effect
- */
-export function giveawaySystemBackupEffectType() {
-    const backupEffectType: Firebot.EffectType<BackupEffectModel> = {
+import type { EffectType } from '@crowbartools/firebot-types';
+import { backup, runOperation } from '../plugin-runtime';
+import type { BackupEffectModel } from '../types/types';
+import template from '../templates/backup-template.html';
+import { withEditor } from '../utility/renderer-callback';
+export function giveawaySystemBackupEffectType(): EffectType<BackupEffectModel> {
+    return {
         definition: {
-            id: "msgg:giveaway-system-backup",
-            name: "Advanced Giveaway Backup Manager",
-            description: "View and restore backed up giveaways",
-            icon: "fad fa-archive",
-            categories: ["overlay"]
+            id: 'msgg:giveaway-system-backup',
+            name: 'Advanced Giveaway Backup Manager',
+            description: 'Restore or remove giveaway backups',
+            icon: 'fad fa-archive',
+            categories: ['overlay'],
         },
-        optionsTemplate: backupTemplate,
-        optionsController: ($scope: any, backendCommunicator: any, utilityService: any) => {
-            $scope.backupGiveaways = [];
-            $scope.loading = false;
-
-            if (!$scope.effect) {
-                $scope.effect = {
-                    giveawaySelectionMode: 'giveawayList',
-                    manualGiveawayTitle: '',
-                    action: 'restore'
+        optionsTemplate: template,
+        optionsController: withEditor(
+            ['$scope', 'backendCommunicator', 'utilityService'],
+            (editor: any, $scope: any, backendCommunicator: any, utilityService: any) => {
+                $scope.effect ||= {};
+                $scope.effect.giveawaySelectionMode ??= 'giveawayList';
+                $scope.effect.action ??= 'restore';
+                $scope.restoreMode = 'overwrite';
+                const refresh = () => {
+                    $scope.loading = true;
+                    backendCommunicator
+                        .fireEventAsync('getBackupGiveaways')
+                        .then((rows: any) => {
+                            $scope.backupGiveaways = rows;
+                        })
+                        .catch((e: Error) => {
+                            $scope.giveawayError = e.message;
+                        })
+                        .finally(() => {
+                            $scope.loading = false;
+                            $scope.$evalAsync();
+                        });
                 };
-            }
-
-            $scope.restoreGiveaway = (backupId: string) => {
-                const giveawayId = backupId.split('::backup::')[0];
-
-                backendCommunicator.fireEventAsync("checkGiveawayExists", { giveawayId })
-                    .then((exists: boolean) => {
-                        if (exists) {
-                            return utilityService.showConfirmationModal({
-                                title: "Giveaway Already Exists",
-                                question: "A giveaway with this name already exists. How would you like to proceed?",
-                                confirmLabel: "Overwrite",
-                                cancelLabel: "Merge",
-                                closeLabel: "Cancel",
-                                confirmBtnType: "btn-danger"
-                            }).then((response: string | boolean) => {
-                                if (response === true) {
-                                    return backendCommunicator.fireEventAsync("restoreGiveaway", { backupId, mode: 'overwrite' });
-                                } else if (response === false) {
-                                    return backendCommunicator.fireEventAsync("restoreGiveaway", { backupId, mode: 'merge' });
-                                }
-                            }).then(() => {
-                                loadBackups();
-                            });
-                        } else {
-                            return backendCommunicator.fireEventAsync("restoreGiveaway", { backupId })
-                                .then(() => loadBackups());
-                        }
+                $scope.restoreGiveaway = async (backupId: string) => {
+                    const mode = $scope.restoreMode;
+                    const yes = await utilityService.showConfirmationModal({
+                        title: mode === 'merge' ? 'Merge Backup' : 'Replace Giveaway',
+                        question:
+                            mode === 'merge'
+                                ? 'Merge entries into the current giveaway? Skipped entries keep this backup available.'
+                                : 'Restore this backup, replacing the current giveaway if present?',
+                        confirmLabel: mode === 'merge' ? 'Merge' : 'Replace',
+                        cancelLabel: 'Cancel',
                     });
-            };
-
-            $scope.deleteBackup = (backupId: string) => {
-                backendCommunicator.fireEventAsync("removeBackup", { giveawayId: backupId })
-                    .then(() => loadBackups());
-            };
-
-            function loadBackups() {
-                if ($scope.effect.giveawaySelectionMode !== 'giveawayList') return;
-
-                $scope.loading = true;
-                backendCommunicator.fireEventAsync("getBackupGiveaways", {})
-                    .then((backups: BackupGiveaway[]) => {
-                        $scope.backupGiveaways = backups;
-                        $scope.loading = false;
-                    })
-                    .catch(() => {
-                        $scope.backupGiveaways = [];
-                        $scope.loading = false;
-                    });
-            }
-
-            $scope.$watch('effect.giveawaySelectionMode', (newMode: string) => {
-                if (newMode === 'giveawayList') {
-                    loadBackups();
-                }
-            });
-
-            $scope.effectValueChanged = () => {
-                loadBackups();
-            };
-
-            loadBackups();
-        },
-        onTriggerEvent: async (event: { effect: BackupEffectModel }) => {
-            if (event.effect.giveawaySelectionMode === 'manual') {
-                const baseId = event.effect.manualGiveawayTitle.startsWith('giveaway_')
-                    ? event.effect.manualGiveawayTitle
-                    : `giveaway_${event.effect.manualGiveawayTitle.replace(/[^a-zA-Z0-9]/g, '_')}`;
-
-                const backupGiveaways = await giveawayManager.getBackupGiveaways();
-
-                if (event.effect.action === 'restore') {
-                    let backupId = baseId;
-
-                    if (!baseId.includes('::backup::')) {
-                        const matchingBackup = backupGiveaways
-                            .filter((backup: BackupGiveaway) => backup.id?.startsWith(baseId))
-                            .sort((a: BackupGiveaway, b: BackupGiveaway) => new Date(b.removedAt).getTime() - new Date(a.removedAt).getTime())[0];
-
-                        if (matchingBackup?.id) {
-                            backupId = matchingBackup.id;
-                        }
-                    }
-
+                    if (!yes) return;
                     try {
-                        await giveawayManager.restoreGiveaway(backupId);
-                    } catch (error) {
-                        logger.warn(`No backup found for giveaway: ${backupId}`);
+                        const result = await backendCommunicator.fireEventAsync('restoreGiveaway', { backupId, mode });
+                        $scope.backupNotice = result.retained
+                            ? 'Backup retained: ' + result.skipped + ' records could not be imported.'
+                            : 'Backup restored';
+                        refresh();
+                    } catch (e: any) {
+                        $scope.giveawayError = e.message;
+                        $scope.$evalAsync();
                     }
-                } else if (event.effect.action === 'remove') {
-                    let backupId = baseId;
-                    if (!baseId.includes('::backup::')) {
-                        const matchingBackup = backupGiveaways
-                            .filter((backup: BackupGiveaway) => backup.id?.startsWith(baseId))
-                            .sort((a: BackupGiveaway, b: BackupGiveaway) => new Date(b.removedAt).getTime() - new Date(a.removedAt).getTime())[0];
-
-                        if (matchingBackup?.id) {
-                            backupId = matchingBackup.id;
-                        }
+                };
+                $scope.deleteBackup = async (giveawayId: string) => {
+                    if (
+                        !(await utilityService.showConfirmationModal({
+                            title: 'Delete Backup',
+                            question: 'Permanently delete this backup?',
+                            confirmLabel: 'Delete',
+                            cancelLabel: 'Cancel',
+                        }))
+                    )
+                        return;
+                    try {
+                        await backendCommunicator.fireEventAsync('removeBackup', { giveawayId });
+                        refresh();
+                    } catch (error: any) {
+                        $scope.giveawayError = error.message;
+                        $scope.$evalAsync();
                     }
-
-                    await giveawayManager.removeBackup(backupId);
-                }
-            }
-
-            return { success: true };
-        }
+                };
+                backendCommunicator.on('changed', refresh);
+                $scope.effectValueChanged = refresh;
+                $scope.$watch('effect.giveawaySelectionMode', refresh);
+                editor.captureDefaults();
+                refresh();
+            },
+        ),
+        optionsValidator: (effect) =>
+            effect.giveawaySelectionMode === 'manual' && !effect.manualGiveawayTitle
+                ? ['Provide a giveaway title or backup ID']
+                : [],
+        onTriggerEvent: (event) => runOperation(() => backup(event.effect)),
     };
-
-    return backupEffectType;
 }

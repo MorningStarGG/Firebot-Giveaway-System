@@ -1,3 +1,5 @@
+<div class="alert alert-danger" role="alert" ng-if="giveawayError">{{giveawayError}}</div>
+<p role="status" ng-if="backupNotice">{{backupNotice}}</p>
 <style>
     .giveawayNames {
         max-width: 150px;
@@ -39,30 +41,21 @@
 <eos-container header="Giveaway Backup Manager" role="region" aria-label="Giveaway Backup Management Interface">
     <div class="input-group" style="margin-bottom: 15px;">
         <span class="input-group-addon" id="mode-label">Giveaway Selection Mode</span>
-        <select class="form-control"
-                ng-model="effect.giveawaySelectionMode"
-                ng-change="effectValueChanged()"
-                aria-labelledby="mode-label"
-                aria-describedby="mode-description">
+        <select class="form-control" ng-model="effect.giveawaySelectionMode" ng-change="effectValueChanged()"
+            aria-labelledby="mode-label" aria-describedby="mode-description">
             <option value="giveawayList">Giveaway Title List</option>
             <option value="manual">Manual Giveaway Title Entry</option>
         </select>
     </div>
 
     <div ng-if="effect.giveawaySelectionMode === 'manual'" role="form" aria-label="Manual Giveaway Entry Form">
-        <firebot-input
-            input-title="Giveaway Title Variable"
-            pad-top="true"
-            model="effect.manualGiveawayTitle"
-            placeholder="$variable or giveaway name"
-            aria-label="Enter Giveaway Title">
+        <firebot-input input-title="Giveaway Title Variable" pad-top="true" model="effect.manualGiveawayTitle"
+            placeholder="$variable or giveaway name" aria-label="Enter Giveaway Title">
         </firebot-input>
 
         <div style="padding-top: 15px;" role="radiogroup" aria-label="Giveaway Action Selection">
-            <firebot-radios
-                model="effect.action"
-                options="{ restore: 'Restore Giveaway', remove: 'Permanently Delete Backup' }"
-                inline="true">
+            <firebot-radios model="effect.action"
+                options="{ restore: 'Restore Giveaway', remove: 'Permanently Delete Backup' }" inline="true">
             </firebot-radios>
         </div>
     </div>
@@ -72,34 +65,34 @@
             <i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Loading backups...
         </div>
 
-        <div ng-if="!loading && (!backupGiveaways || backupGiveaways.length === 0)"
-             class="alert alert-info"
-             role="alert">
+        <div ng-if="!loading && (!backupGiveaways || backupGiveaways.length === 0)" class="alert alert-info"
+            role="alert">
             <i class="fas fa-archive" aria-hidden="true"></i> No backed up giveaways found
         </div>
 
-        <div ng-if="!loading && backupGiveaways.length > 0"
-             ng-repeat="giveaway in backupGiveaways"
-             class="backup-item"
-             style="margin-bottom: 10px; display: flex; justify-content: center; align-items: center;"
-             role="listitem">
+        <div style="margin-bottom:12px"><label>Restore Mode</label><select class="form-control" ng-model="restoreMode"
+                aria-label="Backup restore mode">
+                <option value="overwrite">Replace Giveaway</option>
+                <option value="merge">Merge Entries</option>
+            </select></div>
+        <div ng-if="!loading && backupGiveaways.length > 0" ng-repeat="giveaway in backupGiveaways" class="backup-item"
+            style="margin-bottom: 10px; display: flex; justify-content: center; align-items: center;" role="listitem">
             <div class="input-group giveawayList">
                 <div class="giveawayNames-tooltip-container input-group-addon" role="tooltip">
-                    <span class="giveawayNames" aria-label="Giveaway Title">Giveaway: {{giveaway.giveawayData.title}}</span>
+                    <span class="giveawayNames" aria-label="Giveaway Title">Giveaway:
+                        {{giveaway.giveawayData.title}}</span>
                     <div class="giveawayNames-tooltip" role="tooltip">Giveaway: {{giveaway.giveawayData.title}}</div>
                 </div>
                 <span class="input-group-addon" aria-label="Removal Date">
                     <i class="far fa-clock" aria-hidden="true"></i> {{giveaway.removedAt | date:'medium'}}
                 </span>
                 <span class="input-group-btn">
-                    <button class="btn btn-primary"
-                            ng-click="restoreGiveaway(giveaway.id)"
-                            aria-label="Restore Giveaway {{giveaway.giveawayData.title}}">
+                    <button class="btn btn-primary" ng-click="restoreGiveaway(giveaway.id)"
+                        aria-label="Restore Giveaway {{giveaway.giveawayData.title}}">
                         <i class="fas fa-undo" aria-hidden="true"></i> Restore
                     </button>
-                    <button class="btn btn-danger"
-                            ng-click="deleteBackup(giveaway.id)"
-                            aria-label="Delete Giveaway Backup {{giveaway.giveawayData.title}}">
+                    <button class="btn btn-danger" ng-click="deleteBackup(giveaway.id)"
+                        aria-label="Delete Giveaway Backup {{giveaway.giveawayData.title}}">
                         <i class="fas fa-trash" aria-hidden="true"></i> Delete
                     </button>
                 </span>

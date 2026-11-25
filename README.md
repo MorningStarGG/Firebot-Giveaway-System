@@ -4,8 +4,6 @@ A comprehensive and feature-rich giveaway system for Firebot, designed to be HIG
 
 ## Features
 
-### Core Functionality
-
 ### Giveaway Creation & Management
 - Create giveaways with customizable entry tracking
 - Two input modes for giveaway configuration:
@@ -15,7 +13,7 @@ A comprehensive and feature-rich giveaway system for Firebot, designed to be HIG
 - Entry management:
   - Single entry per user (default)
   - Multiple entries per user allowed (configurable)
-  - Maximum entries per user limit
+  - Maximum admissions per user per run
   - Weighted entries with odds multipliers
 - Entry command customization
 - Pause/Resume functionality
@@ -56,6 +54,52 @@ A comprehensive and feature-rich giveaway system for Firebot, designed to be HIG
 - Remove specific user entries
 - Category-based organization
 - Custom retention periods
+
+## Management UI
+
+### Giveaway Management Page
+
+- Open **Giveaways** in the Firebot sidebar to manage giveaways
+- Top toolbar with giveaway selection, **New Giveaway**, **Templates**, and **Refresh**
+- Remembers the last selected giveaway in the current Firebot profile
+- **Entries & Winners**:
+  - Add weighted entries and check eligibility
+  - Search and page through pool entries and unresolved/resolved wins
+  - Pick winners, manage claims, and approve or deny wins
+- **Configuration**:
+  - Shared form with the Create effect: **Basics**, **Rules**, **Claims & Timing**, **Display**, and **Appearance**
+  - Create and start a giveaway, or save changes to the selected giveaway
+  - Refresh preserves unsaved drafts, **Reload Stored Configuration** replaces the selected draft
+- **History**: Search approved wins, set retention, and purge display history
+- **Backups**: Browse, restore, and delete saved giveaway backups
+- Quick controls for pause/resume, close/open entries, and show/hide
+- **More** actions for restart, stop, **Reset Run**, **Reset Win Counts**, and **Remove & Back Up**
+- Sections load as needed, with searchable paged tables and targeted refreshes
+
+## Template Library
+
+### Reusable Giveaway Configuration
+
+- Open **Templates** from the management page toolbar
+- **Save Draft as Template** keeps configuration in the current profile's library
+- Create, edit, duplicate, rename, preview, and delete templates
+- Apply a template to a new giveaway or an existing giveaway's configuration draft
+- Saving a template-applied draft to an existing giveaway asks for confirmation and preserves its ID, title, overlay instance, entries, winners, and win-count baselines
+- **Load Template** in the Create effect copies settings once, later library edits do not change saved effects
+- Loading a template does not start a giveaway
+
+## Import & Export
+
+### Shareable Template Files
+
+- **Export Selected** or **Export Library** downloads reusable configuration as JSON
+- **Import Files** previews templates before importing them into the library
+- Resolve each import with **Keep Both**, **Replace**, or **Skip**, then confirm
+- Local images are embedded in exports and copied into managed storage on import, image URLs remain URLs
+- Files contain configuration only, excluding entries, usernames, winner history, run IDs, and win-count baselines
+- Importing files does not create or start giveaways
+- Limits: 500 templates per file, 50 MiB per JSON file, and 20 MiB per embedded image
+- See the [template library guide](docs/UPGRADING.md#configuration-and-template-library) for file and image handling details
 
 ## Display Features
 
@@ -171,6 +215,10 @@ Included are animations for the following events:
 ## Events System
 
 ### Giveaway Events
+
+- **Giveaway Entry Attempted** - Before admission, optional inline Manager controls can cancel or change this attempt's odds
+- **Giveaway Entry Accepted** - After the ticket is saved, use for entry confirmation chat
+- **Giveaway Entry Rejected** - Cancellation or a built-in admission rule blocked entry, includes a readable reason
 - **Giveaway Started Event** - Triggered when a giveaway begins
 - **Giveaway Stopped Event** - Triggered when a giveaway ends (manual or automatic)
 - **Winner Picked Event** - Triggered when a winner is randomly selected
@@ -179,6 +227,10 @@ Included are animations for the following events:
 - **Winner Denied Event** - Triggered when the streamer denies a winner
 - **Winner Expired Event** - Triggered when a winner fails to claim in time
 - **Giveaway Empty Event** - Triggered when no entries remain after resolving winners
+
+Entry events need no mode switch. Without custom controls, Add Entry follows the normal rules, including the configured **approved**-win cap. Pending and claimed wins are exposed separately. In **Entry Attempted**, use **Advanced Giveaway Manager → Entry Management → Cancel Entry Attempt** or **Set Entry Attempt Odds** inside Firebot conditionals. Leave **Entry Attempt ID** blank to target the current attempt, cancellation can include a reason. Controls must finish inline before that event completes.
+
+Use `$eventMeta[username]`, `$eventMeta[approvedWins]`, `$eventMeta[pendingWins]`, and `$eventMeta[claimedWins]` for custom checks. Send `@$eventMeta[username]: $eventMeta[reasonText]` from **Entry Rejected**, and success chat from **Entry Accepted**. Expected rejections let subsequent effects continue, so replace unconditional command success messages with the Accepted event or check the new `entryAccepted` effect output. Existing `$giveawayWinSearch` calendar/history queries remain available. See [entry-event controls and metadata](docs/UPGRADING.md#optional-entry-event-controls) for examples, scope rules, outputs, and timing.
 
 ## Variables System
 
@@ -235,7 +287,7 @@ Included are animations for the following events:
 
 ### Backup Features
 - Automatic backup on giveaway removal
-- 7-day backup retention
+- Configurable backup retention (default 7 days)
 - Backup restoration
 - Backup browsing interface
 - Manual backup deletion
@@ -245,7 +297,7 @@ Included are animations for the following events:
 
 ### Winner History Features
 - Automatic archival of approved winners
-- Configurable retention period (default 30 days) -  Configurable **ONLY** inside the Manager effect and will affect **ALL** giveaways
+- Configurable retention period (default 30 days) through the Manager effect or the Giveaways UI in Firebot sidebar **History** tab, affects **all** giveaways
 - Category-based organization
 - Search by username
 - Search by category
@@ -254,9 +306,10 @@ Included are animations for the following events:
 - Manual history management
 - Source tracking (approved/backup/cleanup)
 
-## UI Elements
+## Overlay UI Elements
 
-### Real-time UI Features
+### Real-time Overlay Features
+
 - Live entry updates
 - Live winner status updates
 - Animated winner selection
@@ -380,29 +433,21 @@ Use the "Advanced Giveaway Backup Manager" effect to:
 
 ## Installation
 
-### Script Installation
-1. Download the script files or build it from source following the below instructions
-2. **Place the Script in Firebot Scripts Folder**
-   - In Firebot, navigate to **Settings > Scripts > Manage Startup Scripts**.
-   - Click **Add New Script**.
-   - In the blue notification bar, click the link labeled **scripts folder**.
-   - Copy the downloaded script into this folder.
-   - Hit the **refresh button** beside the **Select script** dropdown.
-   - Select **MSGG-GiveawaySystem.js** from the dropdown menu.
-   - Click **Save**.
-3. The script will add three new effects for use in Firebot:
-   - Advanced Giveaway System
-   - Advanced Giveaway Manager
-   - Advanced Giveaway Backup Manager
-4. The script will also add eight new events for use in Firebot:
-   - Giveaway Started
-   - Giveaway Stopped
-   - Giveaway Empty
-   - Giveaway Winner Picked
-   - Giveaway Winner Claimed
-   - Giveaway Winner Approved
-   - Giveaway Winner Denied
-   - Giveaway Winner Expired
+### Plugin installation
+
+1. Use Firebot **5.67.0 or newer**. Disable/remove the old startup-script registration before enabling the plugin.
+2. Download `MSGG-GiveawaySystem.js` from a release, or build it below. Import the file through **Settings > Plugins** and enable it.
+3. Reload Firebot's main window after adding/updating UI extensions, then refresh the Firebot overlay in OBS.
+4. Open **Giveaways** in the Firebot sidebar, or use the existing **Advanced Giveaway System**, **Advanced Giveaway Manager**, and **Advanced Giveaway Backup Manager** effects.
+
+Entry/claim command fields remain **display text only**. Create your Firebot chat commands and connect them to Manager effects. Running Create starts and shows that giveaway, stored giveaways are not all replayed onto an overlay connection. Show explicitly displays a stored giveaway again.
+
+### Upgrading to v2.0
+
+- Disable the legacy startup script before enabling the plugin, existing effect IDs and variable handles remain supported
+- Entry allowances now count admissions per run, and optional approved-win limits default to unlimited
+- Read [Upgrading and using v2.0](docs/UPGRADING.md) for migration, entry and win rules, claims, entry-event controls, and variable changes
+- See [CHANGELOG.md](CHANGELOG.md) for the release changes
 
 ### Building
 1. Clone the repository:
@@ -411,7 +456,7 @@ git clone https://github.com/MorningStarGG/Firebot-Giveaway-System.git
 ```
 2. Install dependencies:
 ```
-npm install
+npm ci
 ```
 3. Build the script:
 ```
@@ -430,9 +475,9 @@ If a giveaway isn't displaying:
 
 If winners aren't being selected:
 1. Ensure there are entries in the giveaway
-2. Check that the giveaway isn't paused
-3. Verify entries aren't closed (unless intended)
-4. Check that users haven't already won (unless requeue is enabled)
+2. Check eligibility: unresolved wins and configured win limits can hold pool entries
+3. Check positive weights and a valid winner count, manual draws remain available while paused/stopped
+4. Approve or deny the intended unresolved win, or inspect its Win ID in the Givaway tab within Firebot.
 
 If claim timers aren't working:
 1. Verify claim mode is set to "Timer"
@@ -442,7 +487,7 @@ If claim timers aren't working:
 
 ### Requirements
 
-- Firebot 5.63.2 or higher
+- Firebot 5.67.0 or higher
 
 ### Support
 

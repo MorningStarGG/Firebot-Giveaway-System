@@ -1,3 +1,4 @@
+<div class="alert alert-danger" role="alert" ng-if="giveawayError">{{giveawayError}}</div>
 <style>
     .effect-setting-content {
         margin-bottom: -10px;
@@ -35,7 +36,7 @@
 </style>
 
 <!-- Initial warning section -->
-<div ng-if="effect.mode !== 'giveawayStatusControl' && effect.mode !== 'winnerHistory' && (!activeGiveaways || activeGiveaways.length === 0)"
+<div ng-if="!isAttemptControl() && effect.mode !== 'giveawayStatusControl' && effect.mode !== 'winnerHistory' && (!activeGiveaways || activeGiveaways.length === 0)"
     style="margin-bottom: 15px;" aria-label="No active giveaways warning">
     <div class="alert alert-warning" role="alert">
         No active giveaways found. Please create or start a giveaway first.
@@ -43,8 +44,8 @@
 </div>
 
 <!-- Giveaway Selection Mode section -->
-<eos-container ng-if="effect.mode !== 'winnerHistory'" header="Giveaway Selection Mode" pad-top="true"
-    aria-label="Giveaway selection mode configuration">
+<eos-container ng-if="effect.mode !== 'winnerHistory' && !isAttemptControl()" header="Giveaway Selection Mode"
+    pad-top="true" aria-label="Giveaway selection mode configuration">
     <div class="input-group" style="margin-bottom: 10px;">
         <span class="input-group-addon" id="giveawaySelectionModeLabel">Selection Mode</span>
         <select class="form-control" ng-model="effect.giveawaySelectionMode" ng-change="effectValueChanged()"
@@ -69,12 +70,14 @@
             <option value="updateText">Update Text Templates</option>
             <option value="giveawayStatusControl">Update Giveaway Status</option>
             <option value="winnerHistory">Winner History</option>
+            <option value="updatePolicy">Update Win Limits & Rerolls</option>
+            <option value="resetWinCounts">Reset This Giveaway?s Win Counts</option>
         </select>
     </div>
 </eos-container>
 
 <!-- Giveaway selection dropdown section -->
-<eos-container ng-if="effect.mode !== 'winnerHistory'" header="Giveaway Selection" pad-top="true"
+<eos-container ng-if="effect.mode !== 'winnerHistory' && !isAttemptControl()" header="Giveaway Selection" pad-top="true"
     aria-label="Active giveaway selection interface">
     <!-- Manual giveaway title entry -->
     <div ng-if="effect.giveawaySelectionMode === 'manual'" style="margin-bottom: 10px;">
@@ -157,9 +160,35 @@
             <option value="claim">Claim Win (for winner)</option>
             <option value="deny">Deny Winner</option>
             <option value="reroll">Skip/Reroll/Pass Winner</option>
+            <option value="cancelAttempt">Cancel Entry Attempt</option>
+            <option value="setAttemptOdds">Set Entry Attempt Odds</option>
         </select>
     </div>
 
+    <div ng-if="isAttemptControl()">
+        <div class="row" style="margin-bottom: 12px;">
+            <div class="col-sm-6">
+                <firebot-input model="effect.entryAttemptId" input-title="Entry Attempt ID (optional)"
+                    placeholder="Current Entry Attempted event"
+                    aria-label="Entry attempt ID, blank uses the current Entry Attempted event"></firebot-input>
+            </div>
+            <div class="col-sm-6" ng-if="effect.entryAction === 'cancelAttempt'">
+                <firebot-input model="effect.cancellationReason" input-title="Reason (optional)"
+                    placeholder="Entry cancelled"
+                    aria-label="Explanation for cancelling this entry attempt"></firebot-input>
+            </div>
+            <div class="col-sm-6" ng-if="effect.entryAction === 'setAttemptOdds'">
+                <firebot-input model="effect.oddsMultiplier" input-title="Odds Multiplier" type="number" placeholder="1"
+                    aria-label="Positive odds multiplier for this entry attempt"></firebot-input>
+            </div>
+        </div>
+        <p>Run inline within Entry Attempted. The action targets that attempt, not existing tickets.</p>
+    </div>
+
+    <firebot-input
+        ng-if="effect.entryAction === 'claim' || effect.entryAction === 'approve' || effect.entryAction === 'deny' || effect.entryAction === 'reroll'"
+        input-title="Win ID (optional, takes priority over username)" model="effect.winId" style="margin-bottom:12px;"
+        aria-label="Exact win ID to resolve"></firebot-input>
     <!-- Add/Remove -->
     <div ng-if="effect.entryAction === 'add' || effect.entryAction === 'remove'">
         <firebot-input model="effect.username" style="margin-bottom: 10px;" input-title="Username"
@@ -233,7 +262,8 @@
         </div>
         <div class="alert alert-info" role="alert">
             <i class="fas fa-clock"></i>
-            Each winner has {{effect.claimDuration || 60}} seconds to claim their prize using the claim command.
+            Each winner has {{effect.giveawayOptions.claimDuration || 60}} seconds to claim their prize using the claim
+            command.
         </div>
     </div>
 
@@ -252,8 +282,8 @@
     <div ng-if="effect.entryAction === 'approve' || effect.entryAction === 'deny' || effect.entryAction === 'reroll'">
         <div ng-if="pendingWinners.length === 0" class="alert alert-warning" role="alert">
             <i class="fas fa-exclamation-triangle"></i>
-            No winners are pending right now. You can target a username below; it will only work if they are pending or
-            (for deny/reroll) match an approved winner in the deny behavior.
+            No winners are pending right now. You can target a username below, it will only work if they are pending or
+            (for deny) match an approved winner.
         </div>
 
         <div
@@ -277,17 +307,19 @@
             <i class="fas fa-exclamation-triangle"></i>
             <span ng-if="effect.entryAction === 'deny'">
                 {{ effect.giveawayOptions.requeueDenied
-                ? 'Requeue denied winners is ON: the denied user will be placed back into the entry pool.'
-                : 'Requeue denied winners is OFF: the denied user will be removed from the entry pool.' }}
+                ? 'Requeue denied winners is ON: the selected ticket returns to the entry pool.'
+                : 'Requeue denied winners is OFF: the selected ticket stays consumed. Other tickets remain available.'
+                }}
             </span>
             <span ng-if="effect.entryAction === 'reroll'">
-                The skipped user will be removed from the entry pool.
+                Skips this win and attempts a replacement using the configured reroll rule. Other tickets stay in the
+                pool.
             </span>
         </div>
 
         <div ng-if="effect.entryAction === 'approve'" class="alert alert-success" role="alert">
             <i class="fas fa-check-circle"></i>
-            Approving will finalize the win and remove the winner from future draws.
+            Approving finalizes this win. Remaining tickets can win again, subject to the configured win limit.
         </div>
     </div>
 </eos-container>
@@ -659,7 +691,7 @@
         model="effect.giveawayOptions.claimDuration" aria-label="Set claim duration in seconds"
         ng-if="effect.giveawayOptions.claimMode === 'timer'"></firebot-input>
     <firebot-input style="margin-bottom: 10px;" ng-if="effect.giveawayOptions.allowMultipleEntries"
-        input-title="Max Entries Per User" type="number" model="effect.giveawayOptions.maxEntriesPerUser"
+        input-title="Max Entries Per User / Run" type="number" model="effect.giveawayOptions.maxEntriesPerUser"
         aria-label="Set maximum entries per user"></firebot-input>
     <firebot-input style="margin-bottom: 10px;" ng-if="effect.giveawayOptions.autoRemoveAfterClose === true"
         input-title="Display Duration After Close (seconds)" type="number"
@@ -751,7 +783,7 @@
             </label>
         </div>
         <div ng-switch-when="maxEntriesPerUser">
-            <firebot-input input-title="Max Entries Per User" model="effect.setting.value" type="number"
+            <firebot-input input-title="Max Entries Per User / Run" model="effect.setting.value" type="number"
                 placeholder="1"></firebot-input>
         </div>
         <div ng-switch-when="entryCommand">
@@ -1060,7 +1092,7 @@
         <div class="input-group" style="margin-bottom: 10px;">
             <span class="input-group-addon">Odds display</span>
             <select class="form-control" ng-model="effect.display.oddsMode" aria-label="Odds display mode">
-                <option value="both">Ratio &amp; Percentage</option>
+                <option value="both">Ratio & Percentage</option>
                 <option value="ratio">Ratio only</option>
                 <option value="percent">Percentage only</option>
                 <option value="disabled">Disabled</option>
@@ -1188,7 +1220,7 @@
     <div class="alert alert-info" role="alert">
         <i class="fas fa-info-circle"></i>
         Pause will prevent new entries and pause all close/claim timers. <br>Restart keeps existing entries but clears
-        winners; <br>Reset clears entries and winners (including pending), and reopens the giveaway with the stored
+        winners, <br>Reset clears entries and winners (including pending), and reopens the giveaway with the stored
         settings for the selected giveaway. <br>Remove backs up the giveaway then removes it from the overlay.
     </div>
 </eos-container>

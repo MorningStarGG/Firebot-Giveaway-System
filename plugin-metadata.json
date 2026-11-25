@@ -1,0 +1,25 @@
+{
+  "minimumFirebotVersion": {
+    "major": 5,
+    "minor": 67,
+    "patch": 0
+  },
+  "icon": {
+    "type": "font-awesome",
+    "name": "fa-gift",
+    "color": "#a60000"
+  },
+  "category": "tools-utilities",
+  "features": [
+    "effects",
+    "events",
+    "variables",
+    "ui-extensions"
+  ],
+  "tags": [
+    "giveaways",
+    "weighted-draws",
+    "overlays"
+  ],
+  "repo": "https://github.com/MorningStarGG/Firebot-Giveaway-System"
+}

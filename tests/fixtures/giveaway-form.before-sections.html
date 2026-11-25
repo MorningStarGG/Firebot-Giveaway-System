@@ -1,0 +1,488 @@
+<!-- Legacy full form, captured before section loading; benchmark fixture only. -->
+<style>
+    .effect-setting-content {
+        margin-bottom: -10px;
+    }
+</style>
+
+<!-- Main Giveaway Settings Section -->
+<eos-container header="Giveaway Settings" aria-label="Configure main giveaway settings">
+    <firebot-input input-title="Giveaway Title" style="margin-bottom: 10px;" model="effect.giveawayTitle"
+        placeholder="Enter giveaway title" aria-label="Enter the title for your giveaway"></firebot-input>
+    <firebot-input input-title="Prize" style="margin-bottom: 10px;" model="effect.prize"
+        placeholder="What are you giving away?" aria-label="Enter the prize description"></firebot-input>
+    <firebot-input input-title="Category (optional)" style="margin-bottom: 10px;" model="effect.category"
+        placeholder="e.g., Gift Card, Game Key" aria-label="Enter a category for this giveaway"></firebot-input>
+</eos-container>
+
+<!-- Giveaway Configuration Section -->
+<eos-container header="Giveaway Configuration" pad-top="true" aria-label="Configure giveaway behavior settings">
+    <div class="controls-fb-inline" style="margin-bottom: 10px">
+        <div class="controls-fb-inline">
+            <label class="control-fb control--checkbox" aria-label="Enable automatic giveaway closing">Auto close
+                giveaway
+                <input type="checkbox" ng-model="effect.giveawayOptions.autoClose">
+                <div class="control__indicator"></div>
+            </label>
+            <label class="control-fb control--checkbox" aria-label="Allow users to enter multiple times">Allow Multiple
+                Entries
+                <input type="checkbox" ng-model="effect.giveawayOptions.allowMultipleEntries">
+                <div class="control__indicator"></div>
+            </label>
+        </div>
+        <label class="control-fb control--checkbox" style="margin-bottom: 10px;"
+            aria-label="Automatically pick a new winner when claim time expires">
+            Auto pick new winner on expire
+            <input type="checkbox" ng-model="effect.giveawayOptions.autoRerollOnExpire">
+            <div class="control__indicator"></div>
+        </label>
+        <label class="control-fb control--checkbox" style="margin-bottom: 10px;"
+            aria-label="Allow expired winners back into the pool">
+            Requeue expired winners
+            <input type="checkbox" ng-model="effect.giveawayOptions.requeueExpired">
+            <div class="control__indicator"></div>
+        </label>
+        <label class="control-fb control--checkbox" style="margin-bottom: 10px;"
+            aria-label="Allow denied winners back into the pool">
+            Requeue denied winners
+            <input type="checkbox" ng-model="effect.giveawayOptions.requeueDenied">
+            <div class="control__indicator"></div>
+        </label>
+        <label class="control-fb control--checkbox" style="margin-bottom: 10px;"
+            aria-label="Auto remove overlay after close">
+            Auto remove overlay after close
+            <input type="checkbox" ng-model="effect.giveawayOptions.autoRemoveAfterClose">
+            <div class="control__indicator"></div>
+        </label>
+        <div class="input-group" style="margin-bottom: 10px;">
+            <span class="input-group-addon">Require Claim</span>
+            <select class="form-control" ng-model="effect.giveawayOptions.claimMode" ng-change="onClaimModeChange()"
+                aria-label="Configure claim requirements">
+                <option value="enabled">Enable</option>
+                <option value="timer">Timer</option>
+                <option value="disabled">Disabled</option>
+            </select>
+        </div>
+        <firebot-input style="margin-bottom: 10px;" input-title="Claim Duration (seconds)" type="number"
+            model="effect.giveawayOptions.claimDuration" aria-label="Set claim duration in seconds"
+            ng-if="effect.giveawayOptions.claimMode === 'timer'"></firebot-input>
+        <firebot-input input-title="Claim Timer Urgent Threshold (seconds)" style="margin-bottom: 10px;"
+            ng-if="effect.display.showClaimCommand !== false && effect.giveawayOptions.claimMode === 'timer'"
+            model="effect.display.claimTimerUrgentSeconds" type="number" placeholder="10"
+            aria-label="Seconds remaining before claim timer turns urgent"></firebot-input>
+        <firebot-input style="margin-bottom: 10px;" ng-if="effect.giveawayOptions.allowMultipleEntries"
+            input-title="Max Entries Per User" type="number" model="effect.giveawayOptions.maxEntriesPerUser"
+            aria-label="Set maximum entries per user"></firebot-input>
+        <firebot-input style="margin-bottom: 10px;" ng-if="effect.giveawayOptions.autoClose"
+            input-title="Giveaway Duration (seconds)" type="number" model="effect.giveawayOptions.duration"
+            aria-label="Set giveaway duration in seconds"></firebot-input>
+        <firebot-input input-title="Close Timer Urgent Threshold (seconds)" style="margin-bottom: 10px;"
+            ng-if="effect.giveawayOptions.autoClose === true" model="effect.display.closeTimerUrgentSeconds"
+            type="number" placeholder="30"
+            aria-label="Seconds remaining before close timer turns urgent"></firebot-input>
+        <firebot-input style="margin-bottom: 10px;" ng-if="effect.giveawayOptions.autoRemoveAfterClose === true"
+            input-title="Display Duration After Close (seconds)" type="number"
+            model="effect.giveawayOptions.displayDuration"
+            aria-label="Set display duration after giveaway closes"></firebot-input>
+        <firebot-input style="margin-bottom: 10px;" input-title="Ended days before cleanup" type="number"
+            model="effect.giveawayOptions.retentionDays" placeholder="7"
+            aria-label="Number of days to keep ended/backed up giveaways before cleanup"></firebot-input>
+    </div>
+</eos-container>
+
+<!-- Giveaway Display Settings Section -->
+<eos-container header="Giveaway Display Settings" pad-top="true" aria-label="Configure giveaway display options">
+    <div class="controls-fb-inline" style="margin-bottom: 10px">
+        <label class="control-fb control--checkbox" aria-label="Toggle entry count visibility">Show entry count
+            <input type="checkbox" ng-model="effect.display.showEntryCount">
+            <div class="control__indicator"></div>
+        </label>
+        <label class="control-fb control--checkbox" aria-label="Toggle title visibility">Show title
+            <input type="checkbox" ng-model="effect.display.showTitle">
+            <div class="control__indicator"></div>
+        </label>
+        <label class="control-fb control--checkbox" aria-label="Toggle entry command visibility">Show entry command
+            <input type="checkbox" ng-model="effect.display.showEntryCommand">
+            <div class="control__indicator"></div>
+        </label>
+        <label class="control-fb control--checkbox" aria-label="Toggle winner display">Show winner
+            <input type="checkbox" ng-model="effect.display.showWinner">
+            <div class="control__indicator"></div>
+        </label>
+        <label class="control-fb control--checkbox" aria-label="Toggle claim command visibility">Show claim command
+            <input type="checkbox" ng-model="effect.display.showClaimCommand">
+            <div class="control__indicator"></div>
+        </label>
+        <label class="control-fb control--checkbox" aria-label="Toggle close timer display">Show close timer
+            <input type="checkbox" ng-model="effect.display.showCloseTimer">
+            <div class="control__indicator"></div>
+        </label>
+        <label class="control-fb control--checkbox" aria-label="Toggle claim timer display">Show claim timer
+            <input type="checkbox" ng-model="effect.display.showTimer">
+            <div class="control__indicator"></div>
+        </label>
+        <label class="control-fb control--checkbox" aria-label="Show text over image">Show text on image
+            <input type="checkbox" ng-model="effect.display.showImageText">
+            <div class="control__indicator"></div>
+        </label>
+        <label class="control-fb control--checkbox" aria-label="Toggle winner animation">Animate winner
+            <input type="checkbox" ng-model="effect.display.animateWinner">
+            <div class="control__indicator"></div>
+        </label>
+        <label class="control-fb control--checkbox" aria-label="Rotate winners">Rotate winners
+            <input type="checkbox" ng-model="effect.display.rotateWinners">
+            <div class="control__indicator"></div>
+        </label>
+        <div class="input-group" style="margin-bottom: 10px;">
+            <span class="input-group-addon">Display mode</span>
+            <select class="form-control" ng-model="effect.display.displayMode" ng-change="onDisplayModeChange()">
+                <option value="widgetImage">Widget & Image</option>
+                <option value="widgetOnly">Widget Only</option>
+                <option value="imageOnly">Image Only</option>
+                <option value="disabled">Disabled</option>
+            </select>
+        </div>
+        <div class="input-group" style="margin-bottom: 10px;"
+            ng-if="effect.display.displayMode !== 'imageOnly' && effect.display.displayMode !== 'disabled'">
+            <span class="input-group-addon">Widget mode</span>
+            <select class="form-control" ng-model="effect.display.widgetMode" ng-change="onDisplayModeChange()">
+                <option value="full">Full Size</option>
+                <option value="minimal">Minimal</option>
+                <option value="ticker">Ticker</option>
+            </select>
+        </div>
+        <div class="input-group" style="margin-bottom: 10px;" ng-if="effect.display.displayMode === 'widgetImage'">
+            <span class="input-group-addon">Rotation Mode</span>
+            <select class="form-control" ng-model="effect.display.slideMode" ng-change="onSlideModeChange()"
+                ng-disabled="effect.styles.imagePlacement === 'background' || effect.styles.imagePlacement === 'none'"
+                aria-label="Choose rotation mode for image and widget">
+                <option value="image">Image Slide</option>
+                <option value="widget">Widget Slide</option>
+                <option value="cycle">Widget & Image Cycle</option>
+                <option value="disabled">Disabled</option>
+            </select>
+        </div>
+        <div class="input-group" style="margin-bottom: 10px;" ng-if="effect.display.displayMode === 'widgetImage'">
+            <span class="input-group-addon">Image placement</span>
+            <select class="form-control" ng-model="effect.styles.imagePlacement"
+                aria-label="Choose where the image should appear"
+                ng-disabled="effect.display.displayMode !== 'widgetImage'">
+                <option value="above">Above widget</option>
+                <option value="below">Below widget</option>
+                <option value="left">Left of widget</option>
+                <option value="right">Right of widget</option>
+                <option value="background">Background</option>
+            </select>
+        </div>
+        <div class="input-group" style="margin-bottom: 10px;">
+            <span class="input-group-addon">Prize visibility</span>
+            <select class="form-control" ng-model="effect.display.prizeVisibility">
+                <option value="label-prize">Label & Prize</option>
+                <option value="label-only">Label Only</option>
+                <option value="prize-only">Prize Only</option>
+                <option value="disabled">Disabled</option>
+            </select>
+        </div>
+        <div class="input-group" style="margin-bottom: 10px;">
+            <span class="input-group-addon">Odds display</span>
+            <select class="form-control" ng-model="effect.display.oddsMode" aria-label="Odds display mode">
+                <option value="both">Ratio & Percentage</option>
+                <option value="ratio">Ratio only</option>
+                <option value="percent">Percentage only</option>
+                <option value="disabled">Disabled</option>
+            </select>
+        </div>
+        <div ng-if="effect.display.showImageText === true && (effect.display.displayMode === 'widgetImage' || effect.display.displayMode === 'imageOnly')"
+            ng-init="showImageTextPlaceholders = false">
+            <div class="input-group" style="margin-bottom: 10px;">
+                <span class="input-group-addon">Image Text Position</span>
+                <select class="form-control" ng-model="effect.display.imageTextPosition"
+                    aria-label="Position of image text">
+                    <option value="top">Top</option>
+                    <option value="bottom">Bottom</option>
+                    <option value="top-left">Top Left</option>
+                    <option value="top-right">Top Right</option>
+                    <option value="bottom-left">Bottom Left</option>
+                    <option value="bottom-right">Bottom Right</option>
+                    <option value="center">Center</option>
+                    <option value="center-left">Center Left</option>
+                    <option value="center-right">Center Right</option>
+                </select>
+            </div>
+            <firebot-input input-title="Image Text Size (px)" style="margin-bottom: 10px;"
+                model="effect.display.imageTextSize" type="number" placeholder="16"
+                aria-label="Font size for image text"></firebot-input>
+        </div>
+    </div>
+    <firebot-input input-title="Command/Close timer cycle interval (seconds)" style="margin-bottom: 10px;"
+        ng-if="effect.display.widgetMode === 'full' && effect.display.displayMode !== 'imageOnly' && effect.display.showCloseTimer === true && effect.display.showEntryCommand === true"
+        model="effect.display.commandCycleIntervalSeconds" type="number" placeholder="3"
+        aria-label="Seconds between command and timer swap"></firebot-input>
+    <firebot-input input-title="Ticker interval (seconds)" style="margin-bottom: 10px;"
+        model="effect.display.tickerIntervalSeconds" type="number" placeholder="2"
+        aria-label="Seconds between ticker messages"
+        ng-if="effect.display.widgetMode === 'minimal' || effect.display.widgetMode === 'ticker'"></firebot-input>
+    <firebot-input input-title="Winner rotation (seconds)" style="margin-bottom: 10px;"
+        model="effect.display.pendingWinnerRotationSeconds" type="number" placeholder="5"
+        aria-label="How often to rotate pending winners" ng-if="effect.display.rotateWinners === true"></firebot-input>
+    <firebot-input input-title="Slide reveal every (seconds)" style="margin-bottom: 10px;"
+        model="effect.display.slideRevealIntervalSeconds" type="number" placeholder="8"
+        aria-label="Delay between slide-ins"
+        ng-if="effect.display.slideMode === 'image' || effect.display.slideMode === 'widget'"></firebot-input>
+    <firebot-input input-title="Slide visible duration (seconds)" style="margin-bottom: 10px;"
+        model="effect.display.slideVisibleSeconds" type="number" placeholder="4"
+        aria-label="How long the current slide stays visible"
+        ng-if="effect.display.slideMode === 'image' || effect.display.slideMode === 'widget'"></firebot-input>
+    <firebot-input input-title="Cycle interval (seconds)" style="margin-bottom: 10px;"
+        model="effect.display.cycleIntervalSeconds" type="number" placeholder="6"
+        aria-label="Seconds between cycling image and widget"
+        ng-if="effect.display.slideMode === 'cycle'"></firebot-input>
+
+    <!-- Widget + Image mode: show both scales side-by-side -->
+    <div style="margin-bottom: 10px;" class="row" ng-if="effect.display.displayMode === 'widgetImage'">
+        <div class="col-md-6">
+            <firebot-input input-title="Widget Scale" model="effect.styles.giveawayScale" placeholder="1"
+                aria-label="Set giveaway scale size"></firebot-input>
+        </div>
+        <div class="col-md-6">
+            <firebot-input input-title="Image Scale" model="effect.styles.imageScale"
+                ng-if="effect.styles.imagePlacement !== 'none'" type="number" placeholder="1"
+                aria-label="Set image scale separate from giveaway scale"></firebot-input>
+        </div>
+    </div>
+    <!-- Widget Only mode: only widget scale -->
+    <div style="margin-bottom: 10px;" ng-if="effect.display.displayMode === 'widgetOnly'">
+        <firebot-input input-title="Widget Scale" model="effect.styles.giveawayScale" placeholder="1"
+            aria-label="Set giveaway scale size"></firebot-input>
+    </div>
+    <!-- Image Only mode: only image scale -->
+    <div style="margin-bottom: 10px;" ng-if="effect.display.displayMode === 'imageOnly'">
+        <firebot-input input-title="Image Scale" model="effect.styles.imageScale" type="number" placeholder="1"
+            aria-label="Set image scale separate from giveaway scale"></firebot-input>
+    </div>
+
+    <div style="margin-bottom: 10px;"
+        ng-if="effect.display.displayMode === 'widgetImage' || effect.display.displayMode === 'imageOnly'">
+        <h4>Image Location</h4>
+        <firebot-radios
+            ng-disabled="effect.display.displayMode === 'widgetImage' && effect.styles.imagePlacement === 'none'"
+            options="{ url: 'Image URL', local: 'Local file' }" model="effect.styles.imageMode" inline="true"
+            aria-label="Choose giveaway image source"></firebot-radios>
+        <div ng-if="(effect.display.displayMode !== 'widgetImage' || effect.styles.imagePlacement !== 'none') && effect.styles.imageMode === 'url'"
+            style="margin-bottom: 10px;">
+            <firebot-input input-title="Image URL" model="effect.styles.imageUrl" placeholder="https://..."
+                aria-label="Enter image URL for giveaway"></firebot-input>
+        </div>
+        <div ng-if="(effect.display.displayMode !== 'widgetImage' || effect.styles.imagePlacement !== 'none') && effect.styles.imageMode === 'local'"
+            style="margin-bottom: 10px;">
+            <file-chooser model="effect.styles.imageFile" placeholder="Select image file"
+                aria-label="Select local image file for giveaway background/header"></file-chooser>
+        </div>
+    </div>
+    <label class="control-fb control--checkbox"
+        ng-if="effect.display.displayMode === 'widgetImage' && effect.styles.imagePlacement === 'background'"
+        style="margin-bottom: 10px;" aria-label="Add blur to image to make image text more readable">
+        Blur Image
+        <input type="checkbox" ng-model="effect.styles.imageOverlay">
+        <div class="control__indicator"></div>
+    </label>
+</eos-container>
+
+<!-- Giveaway Text Label Section -->
+<eos-container header="Giveaway Text Label Settings" pad-top="true" aria-label="Configure giveaway text labels">
+    <firebot-input input-title="Entries Closed Text" style="margin-bottom: 10px;"
+        model="effect.display.entriesClosedText" placeholder="Entries closed"
+        aria-label="Text to show when entries are closed"></firebot-input>
+    <firebot-input input-title="Prize Label Text" style="margin-bottom: 10px;" model="effect.display.prizeLabelText"
+        placeholder="PRIZE" aria-label="Label text for prize"></firebot-input>
+    <firebot-input input-title="Entry Label Text" style="margin-bottom: 10px;" model="effect.display.statLabelText"
+        placeholder="ENTRIES" aria-label="Label text for entry stats"></firebot-input>
+    <firebot-input input-title="Image Text Template" style="margin-bottom: 10px;"
+        model="effect.display.imageTextTemplate" placeholder="{title} - {prize}"
+        aria-label="Template for image text with placeholders"></firebot-input>
+    <firebot-input input-title="Entry Command Text" style="margin-bottom: 10px;"
+        ng-if="effect.display.showEntryCommand !== false" model="effect.display.entryCommandText"
+        placeholder="Type {command} to join!"
+        aria-label="Customize entry command text; supports {command} placeholder"></firebot-input>
+    <firebot-input input-title="Close Timer Text" style="margin-bottom: 10px;" model="effect.display.closeTimerText"
+        placeholder="Time left: {time}"
+        aria-label="Customize close timer text; supports {time} and {command}"></firebot-input>
+    <firebot-input input-title="Claim Command Text" style="margin-bottom: 10px;"
+        ng-if="effect.display.showClaimCommand !== false && effect.giveawayOptions.claimMode !== 'disabled'"
+        model="effect.display.claimCommandText" placeholder="Type {command} to claim your prize!"
+        aria-label="Customize claim command text; supports {command} placeholder"></firebot-input>
+    <firebot-input input-title="Winner Pending Text" style="margin-bottom: 10px;"
+        model="effect.display.winnerPendingText" placeholder="Winner pending"
+        aria-label="Customize winner pending text"></firebot-input>
+    <firebot-input input-title="Claim Command" style="margin-bottom: 10px;"
+        ng-if="effect.giveawayOptions.claimMode !== 'disabled' && effect.display.showClaimCommand !== false"
+        model="effect.giveawayOptions.claimCommand" placeholder="!claim" aria-label="Set claim command"></firebot-input>
+    <firebot-input input-title="Entry Command" style="margin-bottom: 10px;"
+        ng-if="effect.display.showEntryCommand !== false" model="effect.giveawayOptions.entryCommand"
+        placeholder="!enter" aria-label="Set entry command"></firebot-input>
+    <div class="alert alert-info" style="padding: 6px 10px; margin-bottom: 10px;"
+        ng-if="(effect.display.showClaimCommand !== false && effect.giveawayOptions.claimMode !== 'disabled') && effect.display.showEntryCommand !== false">
+        Claim Command & Entry Command: These fields only change the command text shown on the overlay, they do not
+        create chat commands in Firebot. <br>Available placeholders: <code>{command}</code>
+    </div>
+    <div class="alert alert-info" style="padding: 6px 10px; margin-bottom: 10px;"
+        ng-if="(effect.display.showClaimCommand !== false && effect.giveawayOptions.claimMode !== 'disabled') && effect.display.showEntryCommand === false">
+        Claim Command: This field only changes the claim command text shown on the overlay, it does not create chat
+        commands in Firebot. <br>Available placeholder: <code>{command}</code>
+    </div>
+    <div class="alert alert-info" style="padding: 6px 10px; margin-bottom: 10px;"
+        ng-if="(effect.display.showClaimCommand === false || effect.giveawayOptions.claimMode === 'disabled') && effect.display.showEntryCommand !== false">
+        Entry Command: This field only changes the entry command text shown on the overlay, it does not create chat
+        commands in Firebot. <br>Available placeholder: <code>{command}</code>
+    </div>
+    <div class="alert alert-info" style="padding: 6px 10px; margin-top: 6px;"
+        ng-if="effect.display.showImageText === true && (effect.display.displayMode === 'widgetImage' || effect.display.displayMode === 'imageOnly')"
+        ng-init="showImageTextPlaceholders = false">
+        Image Text Template: You can use any of the following to show data. <br>Available placeholders:
+        <code>{prize}</code>, <code>{title}</code>, <code>{entrycommand}</code>,
+        <code>{claimcommand}</code>, <code>{entries}</code>, <code>{status}</code>, <code>{time}</code>.
+    </div>
+</eos-container>
+
+<!-- Giveaway Style Settings Section -->
+<eos-container header="Giveaway Style Settings" pad-top="true" aria-label="Configure giveaway color and styling">
+    <div style="margin-bottom: 10px;" class="row">
+        <div class="col-md-6">
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Background" model="effect.styles.backgroundColor"
+                    aria-label="Select giveaway background color"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;"
+                ng-if="effect.display.widgetMode !== 'ticker' && effect.display.tickerOnly !== true">
+                <color-picker-input label="Title Text" model="effect.styles.titleColor"
+                    aria-label="Select title text color"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;"
+                ng-if="effect.display.showImageText === true && (effect.display.displayMode === 'widgetImage' || effect.display.displayMode === 'imageOnly')">
+                <color-picker-input label="Image Text Color" model="effect.styles.imageTextColor"
+                    aria-label="Pick color for image text"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;"
+                ng-if="effect.display.widgetMode !== 'ticker' && effect.display.tickerOnly !== true">
+                <color-picker-input label="Winner Text" model="effect.styles.winnerColor"
+                    aria-label="Select winner text color"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;"
+                ng-if="effect.display.widgetMode !== 'ticker' && effect.display.tickerOnly !== true">
+                <color-picker-input label="Prize Label" model="effect.styles.prizeLabelColor"
+                    aria-label="Pick color for prize label"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;"
+                ng-if="effect.display.widgetMode !== 'ticker' && effect.display.tickerOnly !== true">
+                <color-picker-input label="Entry Label" model="effect.styles.statLabelColor"
+                    aria-label="Pick color for entry label"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Entry Text" model="effect.styles.entryTextColor"
+                    aria-label="Pick color for entry command base text"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Claim Text" model="effect.styles.claimTextColor"
+                    aria-label="Pick color for claim command base text"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Claim Timer Text" model="effect.styles.claimTimerTextColor"
+                    aria-label="Pick color for claim timer label"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Close Timer Text" model="effect.styles.closeTimerTextColor"
+                    aria-label="Pick color for close timer label text"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Claim Timer Urgent" model="effect.styles.claimTimerUrgentColor"
+                    aria-label="Pick color for claim timer urgent state"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Status Paused" model="effect.styles.statusPausedColor"
+                    aria-label="Pick color for paused status text"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Status Winner" model="effect.styles.winnerPendingColor"
+                    aria-label="Pick color for winner pending text"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;" ng-if="effect.display.widgetMode === 'ticker'">
+                <color-picker-input label="Odds Text (Ticker)" model="effect.styles.oddsColor"
+                    aria-label="Pick color for odds text in ticker mode"></color-picker-input>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="input-group" style="margin-bottom: 10px;"
+                ng-if="effect.display.widgetMode !== 'ticker' && effect.display.tickerOnly !== true">
+                <color-picker-input label="Accent" model="effect.styles.accentColor"
+                    aria-label="Select giveaway accent color"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="General Text" model="effect.styles.textColor"
+                    aria-label="Select text color"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;"
+                ng-if="effect.display.showImageText === true && (effect.display.displayMode === 'widgetImage' || effect.display.displayMode === 'imageOnly')">
+                <color-picker-input label="Image Text Placeholder" model="effect.styles.imageTextPlaceholderColor"
+                    aria-label="Pick color for image text placeholders"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;"
+                ng-if="effect.display.widgetMode !== 'ticker' && effect.display.tickerOnly !== true">
+                <color-picker-input label="Winner Shadow" model="effect.styles.shadowColor"
+                    aria-label="Select winner text shadow color"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;"
+                ng-if="effect.display.widgetMode !== 'ticker' && effect.display.tickerOnly !== true">
+                <color-picker-input label="Prize Item" model="effect.styles.prizeColor"
+                    aria-label="Pick color for prize item text"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Entry Number" model="effect.styles.entryNumberColor"
+                    aria-label="Pick color for entry count numbers"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Entry Command" model="effect.styles.entryCommandColor"
+                    aria-label="Pick color for entry command text"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Claim Command" model="effect.styles.claimCommandColor"
+                    aria-label="Pick color for claim command text"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Claim Timer Number" model="effect.styles.claimTimerValueColor"
+                    aria-label="Pick color for claim timer countdown"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Close Timer Number" model="effect.styles.closeTimerValueColor"
+                    aria-label="Pick color for close timer countdown"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Close Timer Urgent" model="effect.styles.closeTimerUrgentColor"
+                    aria-label="Pick color for close timer urgent state"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Status Closed" model="effect.styles.statusClosedColor"
+                    aria-label="Pick color for closed status text"></color-picker-input>
+            </div>
+            <div class="input-group" style="margin-bottom: 10px;">
+                <color-picker-input label="Status Ended" model="effect.styles.statusEndedColor"
+                    aria-label="Pick color for ended status text"></color-picker-input>
+            </div>
+        </div>
+        <color-picker-input label="Odds Text" model="effect.styles.oddsColor"
+            ng-if="effect.display.widgetMode !== 'ticker' && effect.display.tickerOnly !== true"
+            aria-label="Pick color for odds text"></color-picker-input>
+    </div>
+</eos-container>
+
+<!-- Overlay Position and Instance Settings -->
+<eos-overlay-position effect="effect" pad-top="true"></eos-overlay-position>
+<eos-overlay-instance effect="effect" pad-top="true"></eos-overlay-instance>
+
+<!-- Overlay Information Alert -->
+<eos-container>
+    <div class="effect-info alert alert-warning" role="alert">
+        This effect requires the Firebot overlay to be loaded in your broadcasting software.
+        <a href ng-click="showOverlayInfoModal()" style="text-decoration:underline"
+            aria-label="Learn more about Firebot overlay requirements">Learn more</a>
+    </div>
+</eos-container>

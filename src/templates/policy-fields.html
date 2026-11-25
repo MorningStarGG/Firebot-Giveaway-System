@@ -1,0 +1,38 @@
+<div style="margin-bottom: 10px">
+    <firebot-input input-title="Approved Wins per Person" type="number" min="1" step="1"
+        ng-model="effect.giveawayOptions.winLimit.maximum" aria-label="Approved wins per person; blank for unlimited" />
+</div>
+<div class="alert alert-info" style="padding: 6px 10px; margin-bottom: 10px">
+    Leave this blank to allow unlimited wins
+</div>
+<div class="input-group" style="margin-bottom: 10px">
+    <span class="input-group-addon">Count Wins From</span>
+    <select class="form-control" ng-model="effect.giveawayOptions.winLimit.scope" aria-label="Win limit scope">
+        <option value="giveaway">This Giveaway Run</option>
+        <option value="category">Same Category</option>
+        <option value="all">All Giveaways</option>
+    </select>
+</div>
+<div ng-if="effect.giveawayOptions.winLimit.maximum != null">
+    <div class="input-group" style="margin-bottom: 10px">
+        <span class="input-group-addon">Counting Period</span>
+        <select class="form-control" ng-model="effect.giveawayOptions.winLimit.period"
+            aria-label="Win limit counting period">
+            <option value="untilReset">Until Counts Are Reset</option>
+            <option value="rolling">Rolling Window</option>
+        </select>
+    </div>
+    <div class="input-group" style="margin-bottom: 10px" ng-if="effect.giveawayOptions.winLimit.period === 'rolling'">
+        <span class="input-group-addon">Rolling Days</span>
+        <input class="form-control" type="number" min="0.001" step="any" ng-model="effect.giveawayOptions.winLimit.days"
+            aria-label="Rolling window in days" />
+    </div>
+</div>
+<div class="input-group" style="margin-bottom: 10px">
+    <span class="input-group-addon">Reroll Winner</span>
+    <select class="form-control" ng-model="effect.giveawayOptions.rerollMode"
+        aria-label="Whether a reroll may select the previous person">
+        <option value="different">Require Different Person</option>
+        <option value="allowPrevious">Allow Previous Person</option>
+    </select>
+</div>

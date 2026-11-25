@@ -1,0 +1,466 @@
+<div class="msgg-giveaway-page" style="padding: 20px">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px">
+        <h2 style="margin: 0">Giveaways</h2>
+        <select class="form-control" style="flex: 1; min-width: 220px; width: auto" ng-model="selectedId"
+            ng-change="selectGiveaway(selectedId)" aria-label="Select giveaway">
+            <option value="">Select a giveaway</option>
+            <option ng-repeat="item in giveaways track by item.id" value="{{item.id}}">
+                {{item.title}} &middot; {{item.status}}
+            </option>
+        </select><button class="btn btn-primary" ng-click="newGiveaway()" ng-disabled="busy">New
+            Giveaway</button><button class="btn btn-default" ng-click="selectTab('Templates')">Templates</button><button
+            class="btn btn-default" ng-click="refresh()" ng-disabled="busy">Refresh</button>
+    </div>
+    <div class="alert alert-danger" role="alert" ng-if="giveawayError">{{giveawayError}}</div>
+    <div class="alert alert-info" role="status" ng-if="notice">{{notice}}</div>
+    <div ng-if="selected" style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px">
+        <strong>{{selected.title}}</strong><span>{{selected.status}} &middot; {{selected.entryCount}} entries &middot;
+            {{selected.pendingCount}} unresolved
+            wins</span><small style="overflow-wrap: anywhere">{{selected.id}}</small><button
+            class="btn btn-default btn-sm" ng-click="status(selected.paused?'resume':'pause')" ng-disabled="busy">
+            {{selected.paused?'Resume':'Pause'}}</button><button class="btn btn-default btn-sm"
+            ng-click="status(selected.entriesClosed?'openEntries':'closeEntries')" ng-disabled="busy">
+            {{selected.entriesClosed?'Open Entries':'Close Entries'}}</button><button class="btn btn-default btn-sm"
+            ng-click="visibility('show')" ng-disabled="busy">Show</button><button class="btn btn-default btn-sm"
+            ng-click="visibility('hide')" ng-disabled="busy">Hide</button><button class="btn btn-default btn-sm"
+            ng-click="toggleMore()" aria-expanded="{{more}}">More</button>
+    </div>
+    <div class="well" ng-if="more && selected" style="display: flex; gap: 8px; flex-wrap: wrap">
+        <button class="btn btn-default" ng-click="status('restart')" ng-disabled="busy">Restart</button><button
+            class="btn btn-default" ng-click="status('stop')" ng-disabled="busy">Stop</button><button
+            class="btn btn-warning" ng-click="status('reset')" ng-disabled="busy">Reset Run</button><button
+            class="btn btn-warning" ng-click="resetCounts()" ng-disabled="busy">Reset Win Counts</button><button
+            class="btn btn-danger" ng-click="status('remove')" ng-disabled="busy">Remove & Back Up</button>
+    </div>
+    <main>
+        <div class="btn-group" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px">
+            <button class="btn btn-default"
+                ng-repeat="item in ['Entries & Winners','Configuration','History','Backups']"
+                ng-class="{active:tab===item}" ng-click="selectTab(item)">
+                {{item}}
+            </button>
+        </div>
+        <div ng-if="tab==='Entries & Winners' && !selected" class="well">
+            Select a giveaway above, create a new giveaway, or open Templates.
+        </div>
+        <div ng-if="tab==='Configuration'">
+            <div ng-if="!draft && !configurationLoading" class="well">
+                Choose a giveaway above or select New Giveaway.
+            </div>
+            <p ng-if="configurationLoading" role="status">Loading configuration...</p>
+            <div ng-if="draft" style="margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap">
+                <button class="btn btn-primary" ng-if="!templateEditorId && !savingTemplate"
+                    ng-click="save(!selectedId)" ng-disabled="busy">
+                    {{selectedId?'Save Configuration':'Create & Start'}}</button><button class="btn btn-default"
+                    ng-if="!templateEditorId && !savingTemplate" ng-click="openSaveTemplate()">
+                    Save Draft as Template</button><button class="btn btn-default"
+                    ng-if="selectedId && !templateEditorId" ng-click="discardDraft()" ng-disabled="busy">
+                    Reload Stored Configuration
+                </button>
+            </div>
+            <div class="well" ng-if="savingTemplate || templateEditorId">
+                <p ng-if="templateEditorId"><strong>Editing Library Template</strong></p>
+                <div class="row" style="margin-bottom: 12px">
+                    <div class="col-sm-6">
+                        <label>Template Name</label><input class="form-control" ng-model="templateDetails.name"
+                            aria-label="Template name" />
+                    </div>
+                    <div class="col-sm-6">
+                        <label>Description</label><input class="form-control" ng-model="templateDetails.description"
+                            aria-label="Template description" />
+                    </div>
+                </div>
+                <button class="btn btn-primary" ng-click="saveTemplate()" ng-disabled="busy">
+                    {{templateEditorId?'Update Template':'Save Template'}}
+                </button>
+                <button class="btn btn-default" ng-if="!templateEditorId" ng-click="cancelSaveTemplate()">
+                    Cancel
+                </button>
+            </div>
+            <msgg-giveaway-configuration ng-repeat="form in (draft ? [draft] : []) track by $id(form)"
+                model="form"></msgg-giveaway-configuration>
+        </div>
+        <div ng-if="tab==='Entries & Winners' && selected">
+            <div class="row" style="margin-bottom: 12px">
+                <div class="col-sm-5">
+                    <label>Username</label><input class="form-control" ng-model="entry.username"
+                        aria-label="Entry username" />
+                </div>
+                <div class="col-sm-3">
+                    <label>Entry Weight</label><input class="form-control" type="number" min="0.001" step="any"
+                        ng-model="entry.weight" aria-label="Entry weight" />
+                </div>
+                <div class="col-sm-4" style="padding-top: 25px">
+                    <button class="btn btn-primary" ng-click="addEntry()" ng-disabled="busy">Add Entry</button>
+                    <button class="btn btn-default" ng-click="inspectUser()" ng-disabled="busy">
+                        Check Eligibility
+                    </button>
+                </div>
+            </div>
+            <p role="status" ng-if="eligibility">
+                {{eligibility.eligibleEntries}} eligible tickets &middot; {{eligibility.oddsPercentage}}% odds &middot;
+                {{eligibility.approvedWins}} counted approved wins &middot; {{eligibility.admissions}} admissions
+                {{eligibility.held?', unresolved win holds remaining tickets':''}}
+            </p>
+            <div class="row" style="margin-bottom: 16px">
+                <div class="col-sm-3">
+                    <label>Winners to Pick</label><input class="form-control" type="number" min="1" step="1"
+                        ng-model="entry.count" aria-label="Winners to pick" />
+                </div>
+                <div class="col-sm-5" style="padding-top: 30px">
+                    <label><input type="checkbox" ng-model="entry.autoApprove" /> Auto-approve Winners</label>
+                </div>
+                <div class="col-sm-4" style="padding-top: 25px">
+                    <button class="btn btn-primary" ng-click="pick()" ng-disabled="busy">Pick</button>
+                    <button class="btn btn-warning" ng-click="clearEntries()" ng-disabled="busy">Clear Pool</button>
+                </div>
+            </div>
+            <section data-area="pending">
+                <h4>Unresolved Wins</h4>
+                <input class="form-control" style="margin: 12px 0" ng-model="panes.pending.search"
+                    ng-change="searchRows('pending')" aria-label="Search pending" placeholder="Search" />
+                <p ng-if="panes.pending.loading" role="status">Loading...</p>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Person</th>
+                            <th>Status</th>
+                            <th>Drawn / Deadline</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="item in panes.pending.rows track by item.winId">
+                            <td>{{item.username}} <small>{{item.oddsPercentage}}%</small></td>
+                            <td>{{item.status}}</td>
+                            <td>
+                                {{item.wonAt | date:'medium'}} <small>{{item.claimDeadline | date:'medium'}}</small>
+                            </td>
+                            <td>
+                                <button class="btn btn-default btn-sm" ng-if="item.status==='pending'"
+                                    ng-click="winnerAction('claim',item)" ng-disabled="busy">
+                                    Claim
+                                </button>
+                                <button class="btn btn-success btn-sm" ng-click="winnerAction('approve',item)"
+                                    ng-disabled="busy">
+                                    Approve
+                                </button>
+                                <button class="btn btn-danger btn-sm" ng-click="winnerAction('deny',item)"
+                                    ng-disabled="busy">
+                                    Deny
+                                </button>
+                                <button class="btn btn-default btn-sm" ng-click="winnerAction('reroll',item)"
+                                    ng-disabled="busy">
+                                    Reroll
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="msgg-pager" style="display: flex; align-items: center; gap: 8px; margin: 12px 0">
+                    <button type="button" class="btn btn-default btn-sm" ng-click="changePage('pending',-1)"
+                        ng-disabled="panes.pending.page<=1 || panes.pending.loading">
+                        Previous</button><span role="status">{{panes.pending.page}} / {{panes.pending.pages}} &middot;
+                        {{panes.pending.total}} records</span><button type="button" class="btn btn-default btn-sm"
+                        ng-click="changePage('pending',1)"
+                        ng-disabled="panes.pending.page>=panes.pending.pages || panes.pending.loading">
+                        Next
+                    </button>
+                </div>
+            </section>
+            <section data-area="entries">
+                <h4>Pool Entries</h4>
+                <input class="form-control" style="margin: 12px 0" ng-model="panes.entries.search"
+                    ng-change="searchRows('entries')" aria-label="Search entries" placeholder="Search" />
+                <p ng-if="panes.entries.loading" role="status">Loading...</p>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Person</th>
+                            <th>Weight</th>
+                            <th>Entered</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="item in panes.entries.rows track by item.entryId">
+                            <td>{{item.username}}</td>
+                            <td>{{item.oddsMultiplier}}</td>
+                            <td>{{item.enteredAt | date:'medium'}}</td>
+                            <td>
+                                <button class="btn btn-default btn-sm" ng-click="removeEntry(item.username)"
+                                    ng-disabled="busy">
+                                    Remove One
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="msgg-pager" style="display: flex; align-items: center; gap: 8px; margin: 12px 0">
+                    <button type="button" class="btn btn-default btn-sm" ng-click="changePage('entries',-1)"
+                        ng-disabled="panes.entries.page<=1 || panes.entries.loading">
+                        Previous</button><span role="status">{{panes.entries.page}} / {{panes.entries.pages}} &middot;
+                        {{panes.entries.total}} records</span><button type="button" class="btn btn-default btn-sm"
+                        ng-click="changePage('entries',1)"
+                        ng-disabled="panes.entries.page>=panes.entries.pages || panes.entries.loading">
+                        Next
+                    </button>
+                </div>
+            </section>
+            <section data-area="winners">
+                <h4>Resolved Wins</h4>
+                <input class="form-control" style="margin: 12px 0" ng-model="panes.winners.search"
+                    ng-change="searchRows('winners')" aria-label="Search winners" placeholder="Search" />
+                <p ng-if="panes.winners.loading" role="status">Loading...</p>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Person</th>
+                            <th>Status</th>
+                            <th>Drawn / Deadline</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="item in panes.winners.rows track by item.winId">
+                            <td>{{item.username}} <small>{{item.oddsPercentage}}%</small></td>
+                            <td>{{item.status}} {{item.resolutionReason}}</td>
+                            <td>{{item.wonAt | date:'medium'}}</td>
+                            <td>
+                                <button class="btn btn-warning btn-sm" ng-if="item.status==='approved'"
+                                    ng-click="winnerAction('deny',item)" ng-disabled="busy">
+                                    Revoke Approval
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="msgg-pager" style="display: flex; align-items: center; gap: 8px; margin: 12px 0">
+                    <button type="button" class="btn btn-default btn-sm" ng-click="changePage('winners',-1)"
+                        ng-disabled="panes.winners.page<=1 || panes.winners.loading">
+                        Previous</button><span role="status">{{panes.winners.page}} / {{panes.winners.pages}} &middot;
+                        {{panes.winners.total}} records</span><button type="button" class="btn btn-default btn-sm"
+                        ng-click="changePage('winners',1)"
+                        ng-disabled="panes.winners.page>=panes.winners.pages || panes.winners.loading">
+                        Next
+                    </button>
+                </div>
+            </section>
+        </div>
+        <div ng-if="tab==='History'">
+            <div class="row" style="margin-bottom: 12px">
+                <div class="col-sm-4">
+                    <label>History Action</label><select class="form-control" ng-model="historyOptions.choice"
+                        aria-label="History management action">
+                        <option value="setRetention">Set Retention</option>
+                        <option value="purgeOlderThan">Purge Older Than</option>
+                        <option value="purgeUser">Purge User</option>
+                        <option value="purgeUserOlderThan">Purge User Older Than</option>
+                        <option value="purgeAll">Purge All Display History</option>
+                    </select>
+                </div>
+                <div class="col-sm-4"
+                    ng-if="historyOptions.choice==='purgeUser' || historyOptions.choice==='purgeUserOlderThan'">
+                    <label>Username</label><input class="form-control" ng-model="historyOptions.username"
+                        aria-label="Username whose display history should be purged" />
+                </div>
+                <div class="col-sm-4" ng-if="historyOptions.choice!=='purgeAll' && historyOptions.choice!=='purgeUser'">
+                    <label>Period (days)</label><input class="form-control" type="number" step="any" min="0.001"
+                        ng-model="historyOptions.days" aria-label="History period in days" />
+                </div>
+            </div>
+            <button class="btn btn-default" ng-click="historyAction(historyOptions.choice)" ng-disabled="busy">
+                Apply History Action
+            </button>
+            <p style="margin-top: 12px">Display history cleanup does not reset win limits.</p>
+            <input class="form-control" style="margin: 12px 0" ng-model="panes.history.search"
+                ng-change="searchRows('history')" aria-label="Search history" placeholder="Search" />
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Person</th>
+                        <th>Giveaway</th>
+                        <th>Category</th>
+                        <th>Approved</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="record in panes.history.rows track by record.id">
+                        <td>{{record.winner.username}}</td>
+                        <td>{{record.giveawayTitle}}</td>
+                        <td>{{record.category}}</td>
+                        <td>{{record.winner.approvedAt || record.winner.wonAt | date:'medium'}}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="msgg-pager" style="display: flex; align-items: center; gap: 8px; margin: 12px 0">
+                <button type="button" class="btn btn-default btn-sm" ng-click="changePage('history',-1)"
+                    ng-disabled="panes.history.page<=1 || panes.history.loading">
+                    Previous</button><span role="status">{{panes.history.page}} / {{panes.history.pages}} &middot;
+                    {{panes.history.total}} records</span><button type="button" class="btn btn-default btn-sm"
+                    ng-click="changePage('history',1)"
+                    ng-disabled="panes.history.page>=panes.history.pages || panes.history.loading">
+                    Next
+                </button>
+            </div>
+        </div>
+        <div ng-if="tab==='Backups'">
+            <input class="form-control" style="margin: 12px 0" ng-model="panes.backups.search"
+                ng-change="searchRows('backups')" aria-label="Search backups" placeholder="Search" />
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Giveaway</th>
+                        <th>Removed</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="record in panes.backups.rows track by record.id">
+                        <td>{{record.title}}</td>
+                        <td>{{record.removedAt | date:'medium'}}</td>
+                        <td>
+                            <button class="btn btn-default" ng-click="restore(record.id,'overwrite')"
+                                ng-disabled="busy">
+                                Replace
+                            </button>
+                            <button class="btn btn-default" ng-click="restore(record.id,'merge')" ng-disabled="busy">
+                                Merge
+                            </button>
+                            <button class="btn btn-danger" ng-click="deleteBackup(record.id)" ng-disabled="busy">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="msgg-pager" style="display: flex; align-items: center; gap: 8px; margin: 12px 0">
+                <button type="button" class="btn btn-default btn-sm" ng-click="changePage('backups',-1)"
+                    ng-disabled="panes.backups.page<=1 || panes.backups.loading">
+                    Previous</button><span role="status">{{panes.backups.page}} / {{panes.backups.pages}} &middot;
+                    {{panes.backups.total}} records</span><button type="button" class="btn btn-default btn-sm"
+                    ng-click="changePage('backups',1)"
+                    ng-disabled="panes.backups.page>=panes.backups.pages || panes.backups.loading">
+                    Next
+                </button>
+            </div>
+        </div>
+        <div ng-if="tab==='Templates'">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px">
+                <h3 style="margin: 0">Templates</h3>
+                <button class="btn btn-default" ng-click="newTemplate()">New Template</button><button
+                    class="btn btn-default" ng-click="exportSelected()" ng-disabled="busy">Export
+                    Selected</button><button class="btn btn-default" ng-click="clearTemplateSelection()">Clear
+                    Selection</button><button class="btn btn-default" ng-click="exportTemplates()"
+                    ng-disabled="busy">Export Library</button><label class="btn btn-default" style="margin: 0">Import
+                    Files<input type="file" accept=".json,application/json" style="display: none" msgg-template-file
+                        on-template-file="importFile(text,fileError)" /></label>
+            </div>
+            <input class="form-control" style="margin: 12px 0" ng-model="panes.templates.search"
+                ng-change="searchRows('templates')" aria-label="Search templates" placeholder="Search" />
+            <div class="well" ng-if="rename">
+                <label>Template Name</label><input class="form-control" ng-model="rename.name"
+                    aria-label="New template name" /><button class="btn btn-primary" ng-click="commitRename()"
+                    ng-disabled="busy">
+                    Rename
+                </button>
+                <button class="btn btn-default" ng-click="cancelRename()">Cancel</button>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="item in panes.templates.rows track by item.id">
+                        <td>
+                            <label><input type="checkbox" ng-model="selectedTemplates[item.id]"
+                                    aria-label="Select template {{item.name}}" />
+                                {{item.name}}</label>
+                        </td>
+                        <td>{{item.description}}</td>
+                        <td style="display: flex; gap: 6px; flex-wrap: wrap">
+                            <button class="btn btn-primary btn-sm" ng-click="previewTemplate(item.id,'new')">
+                                Use for New</button><button class="btn btn-default btn-sm" ng-if="selected"
+                                ng-click="previewTemplate(item.id,'existing')">
+                                Use for Selected</button><button class="btn btn-default btn-sm"
+                                ng-click="editTemplate(item.id)">Edit</button><button class="btn btn-default btn-sm"
+                                ng-click="duplicateTemplate(item.id)">
+                                Duplicate</button><button class="btn btn-default btn-sm"
+                                ng-click="renameTemplate(item.id,item.name)">
+                                Rename</button><button class="btn btn-default btn-sm"
+                                ng-click="exportTemplates([item.id])" ng-disabled="busy">
+                                Export</button><button class="btn btn-danger btn-sm" ng-click="deleteTemplate(item.id)"
+                                ng-disabled="busy">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="msgg-pager" style="display: flex; align-items: center; gap: 8px; margin: 12px 0">
+                <button type="button" class="btn btn-default btn-sm" ng-click="changePage('templates',-1)"
+                    ng-disabled="panes.templates.page<=1 || panes.templates.loading">
+                    Previous</button><span role="status">{{panes.templates.page}} / {{panes.templates.pages}} &middot;
+                    {{panes.templates.total}}
+                    records</span><button type="button" class="btn btn-default btn-sm"
+                    ng-click="changePage('templates',1)"
+                    ng-disabled="panes.templates.page>=panes.templates.pages || panes.templates.loading">
+                    Next
+                </button>
+            </div>
+            <div class="well" ng-if="templatePreview">
+                <h4>
+                    Use {{templatePreview.name}} {{templatePreview.target==='existing'?'for '+selected.title:'for a New
+                    Giveaway'}}
+                </h4>
+                <p>Review configuration changes below. Copying replaces the draft. Save applies it to a giveaway.</p>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Setting</th>
+                            <th>Current</th>
+                            <th>Template</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="change in templatePreview.changes">
+                            <td>{{change.field}}</td>
+                            <td style="max-width: 250px; overflow-wrap: anywhere">{{change.before}}</td>
+                            <td style="max-width: 250px; overflow-wrap: anywhere">{{change.after}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button class="btn btn-primary" ng-click="usePreview()">Copy to Draft</button>
+                <button class="btn btn-default" ng-click="cancelTemplatePreview()">Cancel</button>
+            </div>
+            <div class="well" ng-if="importPreview">
+                <h4>Import Preview</h4>
+                <p>Review each library change. Importing does not start or alter a giveaway.</p>
+                <div class="row" style="margin-bottom: 10px" ng-repeat="row in importPreview">
+                    <div class="col-sm-6">
+                        {{row.name}} {{row.hasImage?'(image included)':''}}
+                        <p>{{row.description}}</p>
+                    </div>
+                    <div class="col-sm-3">
+                        <select class="form-control" ng-model="row.action" aria-label="Import action for {{row.name}}">
+                            <option value="copy">Keep Both / Add Copy</option>
+                            <option value="replace" ng-if="row.conflicts.length">Replace Existing</option>
+                            <option value="skip">Skip</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-3" ng-if="row.action==='replace'">
+                        <select class="form-control" ng-model="row.targetId" aria-label="Template to replace">
+                            <option ng-repeat="target in row.conflicts" value="{{target.id}}">{{target.name}}</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary" ng-click="commitImport()" ng-disabled="busy">Import Templates</button>
+                <button class="btn btn-default" ng-click="cancelImport()">Cancel</button>
+            </div>
+        </div>
+    </main>
+</div>

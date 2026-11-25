@@ -947,7 +947,7 @@
     </div>
 
     <script>
-        const CONFIG = {};
+
 
         let commandCycleInterval = null;
         let tickerUpdateInterval = null;
@@ -1125,7 +1125,7 @@
         function resolveImageUrl(styles) {
             if (!styles) return '';
             if (styles.imageMode === 'local' && styles.imageToken) {
-                return `http://${window.location.hostname}:7472/resource/${styles.imageToken}`;
+                return new URL('/resource/' + encodeURIComponent(styles.imageToken), location.href).href;
             }
             return styles.imageUrl || '';
         }
@@ -1555,7 +1555,7 @@
             winnerSection.classList.add('active');
             const winnerName = container.querySelector('.winner-name');
             if (winnerName) {
-                winnerName.textContent = winner.username || '';
+                winnerName.textContent = winner.displayName || winner.username || '';
             }
 
             const oddsDisplay = container.querySelector('.odds-display');
@@ -1775,7 +1775,7 @@
             if (latestWinner && config.display?.showWinner !== false) {
                 messages.push({
                     label: 'Winner',
-                    value: latestWinner.username,
+                    value: latestWinner.displayName || latestWinner.username,
                     valueColor: winnerColor || textColor || ''
                 });
             }
@@ -2699,12 +2699,31 @@
             }
         }
 
-        // Handle initial display
-        if (CONFIG && CONFIG.giveawayData) {
-            console.log('Initial giveaway display:', CONFIG);
-            updateGiveawayDisplay(CONFIG);
-        }
-
+        window.addEventListener('message', event => {
+            if (event.source !== window.parent || event.data?.protocol !== 1 || !event.data?.config) return;
+            const packet = event.data;
+            let fonts = document.getElementById('firebot-overlay-fonts');
+            if (!fonts) { fonts = document.createElement('style'); fonts.id = 'firebot-overlay-fonts'; document.head.appendChild(fonts); }
+            fonts.textContent = packet.fontCss || '';
+            const root = document.querySelector('.giveawayOverlay');
+            root.id = getGiveawayId(packet.config.giveawayTitle);
+            Object.assign(root.style, { position: 'absolute', width: 'max-content', top: '', bottom: '', left: '', right: '', transform: '' });
+            document.body.style.margin = '0'; document.body.style.overflow = 'hidden';
+            const position = packet.config.position || 'Middle';
+            if (position === 'Custom') {
+                for (const side of ['top', 'bottom', 'left', 'right']) { const value = packet.config.customCoords?.[side]; if (value != null) root.style[side] = Number(value) + 'px'; }
+            } else {
+                const vertical = position.startsWith('Top') ? 'top' : position.startsWith('Bottom') ? 'bottom' : 'center';
+                const horizontal = position.endsWith('Left') ? 'left' : position.endsWith('Right') ? 'right' : 'center';
+                if (vertical === 'center') root.style.top = '50%'; else root.style[vertical] = '0';
+                if (horizontal === 'center') root.style.left = '50%'; else root.style[horizontal] = '0';
+                root.style.transform = 'translate(' + (horizontal === 'center' ? '-50%' : '0') + ',' + (vertical === 'center' ? '-50%' : '0') + ')';
+            }
+            updateGiveawayDisplay(packet.config);
+            let custom = document.getElementById('giveaway-custom-css');
+            if (!custom) { custom = document.createElement('style'); custom.id = 'giveaway-custom-css'; document.head.appendChild(custom); }
+            custom.textContent = packet.config.styles?.customCSS || '';
+        });
         // Handle giveaway system updates
         window.addEventListener('giveawaySystemUpdate', (event) => {
             console.log('Received giveawaySystemUpdate event:', event);

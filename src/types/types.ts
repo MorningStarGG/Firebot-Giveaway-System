@@ -1,42 +1,61 @@
 // ============================================================================
 // Basic Type Definitions
 // ============================================================================
-
 /**
  * Different modes of giveaway selection
  */
 export type GiveawaySelectionMode = 'giveawayList' | 'manual';
-
 /**
  * Actions that can be performed on a giveaway
  */
 export type GiveawayAction = 'add' | 'remove' | 'clear';
 export type BackupAction = 'restore' | 'remove';
-export type StatusControlAction = 'stop' | 'restart' | 'reset' | 'remove' | 'pause' | 'resume' | 'closeEntries' | 'openEntries';
+export type StatusControlAction =
+    | 'stop'
+    | 'restart'
+    | 'reset'
+    | 'remove'
+    | 'pause'
+    | 'resume'
+    | 'closeEntries'
+    | 'openEntries';
 export type VisibilityAction = 'show' | 'hide';
-export type EntryManagementAction = 'add' | 'remove' | 'pick' | 'approve' | 'claim' | 'deny' | 'reroll';
+export type EntryManagementAction =
+    | 'add'
+    | 'remove'
+    | 'pick'
+    | 'approve'
+    | 'claim'
+    | 'deny'
+    | 'reroll'
+    | 'cancelAttempt'
+    | 'setAttemptOdds';
 export type WinnerHistoryAction = 'setRetention' | 'purgeOlderThan' | 'purgeUser' | 'purgeUserOlderThan' | 'purgeAll';
 export type WinnerHistoryUnit = 'minutes' | 'hours' | 'days' | 'years';
-
 /**
  * Winner status states
  */
 export type WinnerStatus = 'pending' | 'claimed' | 'approved' | 'denied' | 'expired';
-
 /**
  * Claim mode configuration
  */
 export type ClaimMode = 'enabled' | 'timer' | 'disabled';
-
 /**
  * Image text position options
  */
-export type ImageTextPosition = 'top' | 'bottom' | 'top-left' | 'bottom-left' | 'top-right' | 'bottom-right' | 'center' | 'center-left' | 'center-right';
-
+export type ImageTextPosition =
+    | 'top'
+    | 'bottom'
+    | 'top-left'
+    | 'bottom-left'
+    | 'top-right'
+    | 'bottom-right'
+    | 'center'
+    | 'center-left'
+    | 'center-right';
 // ============================================================================
 // Base Interfaces
 // ============================================================================
-
 /**
  * Custom coordinates for giveaway positioning
  */
@@ -46,22 +65,27 @@ export interface CustomCoords {
     left: number | null;
     right: number | null;
 }
-
 /**
  * Represents an entry in the giveaway
  */
 export interface GiveawayEntry {
+    entryId?: string;
     username: string;
     oddsMultiplier: number;
     enteredAt: string;
     userId?: string;
 }
-
 /**
  * Represents a winner in the giveaway
  */
 export interface GiveawayWinner {
     winId?: string;
+    entry?: GiveawayEntry;
+    runId?: string;
+    resolutionReason?: string;
+    selectedEntryWeight?: number;
+    eligibleEntries?: number;
+    eligibleWeight?: number;
     username: string;
     oddsMultiplier: number;
     oddsPercentage?: string;
@@ -74,18 +98,15 @@ export interface GiveawayWinner {
     expiredAt?: string;
     claimDeadline?: string;
 }
-
 // ============================================================================
 // Display & Style Configuration
 // ============================================================================
-
 /**
  * Shared display mode types (used by multiple effects and overlay)
  */
 export type SlideMode = 'image' | 'widget' | 'cycle' | 'disabled';
 export type DisplayMode = 'widgetImage' | 'widgetOnly' | 'imageOnly' | 'disabled';
 export type WidgetMode = 'full' | 'minimal' | 'ticker';
-
 /**
  * Controls the visual display settings of a giveaway
  */
@@ -133,7 +154,6 @@ export interface GiveawayDisplay {
     imageTextPosition?: ImageTextPosition;
     imageTextSize?: number;
 }
-
 /**
  * Visual styling configuration for giveaways
  */
@@ -182,15 +202,15 @@ export interface GiveawayStyles {
     statusEndedColor?: string;
     statusLabelColor?: string;
 }
-
 // ============================================================================
 // Giveaway Configuration
 // ============================================================================
-
 /**
  * Configuration for giveaway options and behavior
  */
 export interface GiveawayOptionsConfig {
+    winLimit?: WinLimit;
+    rerollMode?: 'different' | 'allowPrevious';
     entryCommand: string;
     claimCommand: string;
     claimMode?: ClaimMode;
@@ -208,7 +228,6 @@ export interface GiveawayOptionsConfig {
     allowMultipleEntries: boolean;
     maxEntriesPerUser: number;
 }
-
 /**
  * Core giveaway data structure
  */
@@ -224,7 +243,6 @@ export interface GiveawayData {
     statLabelText?: string;
     entriesClosedText?: string;
 }
-
 /**
  * Base configuration for creating/updating giveaways
  */
@@ -238,7 +256,6 @@ export interface BaseGiveawayConfig {
     customCoords: CustomCoords;
     overlayInstance: string;
 }
-
 /**
  * Complete giveaway configuration including options and data
  */
@@ -247,15 +264,20 @@ export interface GiveawayConfig extends BaseGiveawayConfig {
     giveawayOptions: GiveawayOptionsConfig;
     giveawayData?: GiveawayData;
 }
-
 // ============================================================================
 // State & Events
 // ============================================================================
-
 /**
  * Represents the current state of a giveaway
  */
 export interface GiveawayState {
+    overlayHideAt?: string;
+    runId?: string;
+    admissions?: Record<string, number>;
+    winLimit?: WinLimit;
+    winLimitResetAt?: string;
+    winLimitResetSequence?: number;
+    rerollMode?: 'different' | 'allowPrevious';
     uuid: string;
     giveawayData: GiveawayData;
     entries: GiveawayEntry[];
@@ -289,7 +311,6 @@ export interface GiveawayState {
     allowMultipleEntries: boolean;
     maxEntriesPerUser: number;
 }
-
 /**
  * Backup giveaway extension
  */
@@ -297,12 +318,10 @@ export interface BackupGiveaway extends GiveawayState {
     removedAt: string;
     id?: string;
 }
-
 /**
  * Winner history records (stored separately from giveaways/backups so win history can persist after cleanup).
  */
 export type WinnerHistorySource = 'approved' | 'giveawayCleanup' | 'backupRemove' | 'backupCleanup' | 'manual';
-
 export interface WinnerHistoryRecord {
     id?: string;
     giveawayId: string;
@@ -314,12 +333,10 @@ export interface WinnerHistoryRecord {
     source: WinnerHistorySource;
     winner: GiveawayWinner;
 }
-
 export interface WinnerHistorySettings {
     retentionMs: number;
     updatedAt: string;
 }
-
 /**
  * Model for backup manager effect
  */
@@ -329,11 +346,9 @@ export interface BackupEffectModel {
     manualGiveawayTitle: string;
     action: BackupAction;
 }
-
 // ============================================================================
 // Event Metadata
 // ============================================================================
-
 /**
  * Various metadata interfaces for giveaway events
  */
@@ -344,7 +359,6 @@ export interface GiveawayStartMetadata {
     prize: string;
     duration: number;
 }
-
 export interface GiveawayWinnerMetadata {
     giveawayId: string;
     giveawayTitle: string;
@@ -355,7 +369,6 @@ export interface GiveawayWinnerMetadata {
     oddsPercentage?: string;
     oddsString?: string;
 }
-
 export interface GiveawayClaimMetadata {
     giveawayId: string;
     giveawayTitle: string;
@@ -363,7 +376,6 @@ export interface GiveawayClaimMetadata {
     prize: string;
     winner: string;
 }
-
 export interface GiveawayApprovalMetadata {
     giveawayId: string;
     giveawayTitle: string;
@@ -372,7 +384,6 @@ export interface GiveawayApprovalMetadata {
     winner: string;
     approved: boolean;
 }
-
 export interface GiveawayEmptyMetadata {
     giveawayId: string;
     giveawayTitle: string;
@@ -380,11 +391,9 @@ export interface GiveawayEmptyMetadata {
     prize: string;
     reason: 'approved' | 'denied' | 'expired' | 'reroll';
 }
-
 // ============================================================================
 // Effect Models
 // ============================================================================
-
 /**
  * Base model for giveaway effects
  */
@@ -392,11 +401,13 @@ export interface BaseEffectModel extends BaseGiveawayConfig {
     giveawaySelectionMode: GiveawaySelectionMode;
     manualGiveawayTitle?: string;
 }
-
 /**
  * Model for giveaway update effects
  */
 export interface GiveawayUpdateModel extends BaseEffectModel {
+    entryAttemptId?: string;
+    cancellationReason?: string;
+    winId?: string;
     action: GiveawayAction;
     entryAction?: EntryManagementAction;
     mode: string;
@@ -411,59 +422,171 @@ export interface GiveawayUpdateModel extends BaseEffectModel {
     removeAllEntries?: boolean;
     closeTimeSeconds?: number;
     clearCloseTime?: boolean;
-    giveawayOptions: Partial<GiveawayOptionsConfig> & { category?: string };
+    giveawayOptions: Partial<GiveawayOptionsConfig> & {
+        category?: string;
+    };
     statusAction?: StatusControlAction;
     visibilityAction?: VisibilityAction;
     setting?: SettingUpdate;
 }
-
+export interface GiveawayManagerResult {
+    success: boolean;
+    removed?: number;
+    outputs: {
+        winner: string;
+        entryCount: number;
+        entryAccepted?: boolean;
+        entryReason?: string;
+        entryReasonText?: string;
+        entryAttemptId?: string;
+        entryOddsMultiplier?: number;
+        entryAttemptUpdated?: boolean;
+    };
+}
+export interface WinLimit {
+    maximum: number | null;
+    scope: 'giveaway' | 'category' | 'all';
+    period: 'untilReset' | 'rolling';
+    days: number;
+}
+export interface ApprovalRecord {
+    winId: string;
+    giveawayId: string;
+    runId: string;
+    username: string;
+    category: string;
+    approvedAt: string;
+    sequence: number;
+    revokedAt?: string;
+}
 /**
  * Setting update types
  */
-export type SettingUpdate = BooleanSetting | CommandSetting | StyleSetting | NumberSetting | SlideModeSetting | DisplayModeSetting;
-
+export type SettingUpdate =
+    | BooleanSetting
+    | CommandSetting
+    | StyleSetting
+    | NumberSetting
+    | SlideModeSetting
+    | DisplayModeSetting;
 export interface BooleanSetting {
-    type: 'allowMultipleEntries' | 'showEntryCount' | 'showEntryCommand' |
-          'showWinner' | 'showOdds' | 'showOddsPercentage' | 'showOddsRatio' | 'showClaimCommand' | 'showTimer' | 'showCloseTimer' | 'animateWinner' | 'rotateWinners' | 'minimalMode' | 'imageOnlyMode' | 'requireClaim' | 'autoRerollOnExpire' |
-          'requeueExpired' | 'requeueDenied' | 'autoRemoveAfterClose' | 'enableClaimTimer' | 'clearCloseTime' | 'autoClose' | 'showImageText';
+    type:
+    | 'allowMultipleEntries'
+    | 'showEntryCount'
+    | 'showEntryCommand'
+    | 'showWinner'
+    | 'showOdds'
+    | 'showOddsPercentage'
+    | 'showOddsRatio'
+    | 'showClaimCommand'
+    | 'showTimer'
+    | 'showCloseTimer'
+    | 'animateWinner'
+    | 'rotateWinners'
+    | 'minimalMode'
+    | 'imageOnlyMode'
+    | 'requireClaim'
+    | 'autoRerollOnExpire'
+    | 'requeueExpired'
+    | 'requeueDenied'
+    | 'autoRemoveAfterClose'
+    | 'enableClaimTimer'
+    | 'clearCloseTime'
+    | 'autoClose'
+    | 'showImageText';
     value: boolean;
 }
-
 export interface SlideModeSetting {
     type: 'slideMode';
     value: SlideMode;
 }
-
 export interface DisplayModeSetting {
     type: 'displayMode' | 'widgetMode' | 'oddsMode' | 'claimMode' | 'imageTextPosition';
     value: string | ClaimMode | ImageTextPosition;
 }
-
 export interface StyleSetting {
-    type: 'backgroundColor' | 'accentColor' | 'textColor' | 'titleColor' |
-          'winnerColor' | 'shadowColor' | 'giveawayScale' |
-          'showImage' | 'imageMode' | 'imageUrl' | 'imageFile' | 'imagePlacement' | 'imageOverlay' | 'imageScale' |
-          'prizeLabelColor' | 'prizeColor' | 'statLabelColor' | 'entryCommandColor' | 'closeTimerColor' | 'closeTimerTextColor' | 'closeTimerValueColor' | 'closeTimerUrgentColor' | 'claimCommandColor' | 'claimTimerColor' | 'claimTimerTextColor' | 'claimTimerValueColor' | 'claimTimerUrgentColor' | 'winnerPendingColor' | 'oddsColor' | 'imageTextColor' | 'imageTextPlaceholderColor' | 'entryTextColor' | 'claimTextColor' | 'entryNumberColor' | 'statusClosedColor' | 'statusPausedColor' | 'statusEndedColor' | 'statusLabelColor';
+    type:
+    | 'backgroundColor'
+    | 'accentColor'
+    | 'textColor'
+    | 'titleColor'
+    | 'winnerColor'
+    | 'shadowColor'
+    | 'giveawayScale'
+    | 'showImage'
+    | 'imageMode'
+    | 'imageUrl'
+    | 'imageFile'
+    | 'imagePlacement'
+    | 'imageOverlay'
+    | 'imageScale'
+    | 'prizeLabelColor'
+    | 'prizeColor'
+    | 'statLabelColor'
+    | 'entryCommandColor'
+    | 'closeTimerColor'
+    | 'closeTimerTextColor'
+    | 'closeTimerValueColor'
+    | 'closeTimerUrgentColor'
+    | 'claimCommandColor'
+    | 'claimTimerColor'
+    | 'claimTimerTextColor'
+    | 'claimTimerValueColor'
+    | 'claimTimerUrgentColor'
+    | 'winnerPendingColor'
+    | 'oddsColor'
+    | 'imageTextColor'
+    | 'imageTextPlaceholderColor'
+    | 'entryTextColor'
+    | 'claimTextColor'
+    | 'entryNumberColor'
+    | 'statusClosedColor'
+    | 'statusPausedColor'
+    | 'statusEndedColor'
+    | 'statusLabelColor';
     value: string | number | boolean;
 }
-
 export interface CommandSetting {
-    type: 'entryCommand' | 'claimCommand' | 'category' | 'entriesClosedText' | 'prizeLabelText' | 'statLabelText' | 'entryCommandText' | 'closeTimerText' | 'claimCommandText' | 'winnerPendingText' | 'oddsText' | 'imageTextTemplate';
+    type:
+    | 'entryCommand'
+    | 'claimCommand'
+    | 'category'
+    | 'entriesClosedText'
+    | 'prizeLabelText'
+    | 'statLabelText'
+    | 'entryCommandText'
+    | 'closeTimerText'
+    | 'claimCommandText'
+    | 'winnerPendingText'
+    | 'oddsText'
+    | 'imageTextTemplate';
     value: string;
 }
-
 export interface NumberSetting {
-    type: 'maxEntriesPerUser' | 'retentionDays' | 'pendingWinnerRotationSeconds' | 'cycleIntervalSeconds' | 'tickerIntervalSeconds' | 'commandCycleIntervalSeconds' | 'slideRevealIntervalSeconds' | 'slideVisibleSeconds' | 'autoCloseSeconds' | 'claimDuration' | 'displayDuration' | 'closeTimerUrgentSeconds' | 'claimTimerUrgentSeconds' | 'imageTextSize' | 'duration';
+    type:
+    | 'maxEntriesPerUser'
+    | 'retentionDays'
+    | 'pendingWinnerRotationSeconds'
+    | 'cycleIntervalSeconds'
+    | 'tickerIntervalSeconds'
+    | 'commandCycleIntervalSeconds'
+    | 'slideRevealIntervalSeconds'
+    | 'slideVisibleSeconds'
+    | 'autoCloseSeconds'
+    | 'claimDuration'
+    | 'displayDuration'
+    | 'closeTimerUrgentSeconds'
+    | 'claimTimerUrgentSeconds'
+    | 'imageTextSize'
+    | 'duration';
     value: number;
 }
-
 /**
  * Model for general effects
  */
 export interface EffectModel extends BaseGiveawayConfig {
     giveawayOptions: GiveawayOptionsConfig;
 }
-
 /**
  * Event-related data structures
  */
@@ -474,7 +597,6 @@ export interface EventData {
     entriesClosed?: boolean;
     overlayInstance: string | null;
 }
-
 export interface GiveawayTitleInfo {
     giveawayId: string;
     displayTitle: string;
